@@ -139,4 +139,4 @@ function chapterMatches(chapters,query) {
   if(ranked.some(x=>x.score===0))return ranked.filter(x=>x.score===0).slice(0,100);
   return ranked.slice(0,100);
 }
-module.exports={parseTXT,parseEPUB,finalizeBook,decodeText,stripGutenberg,htmlText,paragraphs,chapterMatches,simplify,traditional,safeText,uid,MAX_BYTES,aliases};
+module.exports={aliases,parseTXT,parseEPUB,finalizeBook,decodeText,stripGutenberg,htmlText,paragraphs,chapterMatches,simplify,traditional,safeText,uid,MAX_BYTES,aliases};
