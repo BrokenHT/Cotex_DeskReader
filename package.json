@@ -10,9 +10,12 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "start": "electron .",
-    "test": "node --test tests/core.test.cjs tests/cotex.test.cjs tests/sources.test.cjs tests/window.test.cjs",
+    "test": "node --test tests/core.test.cjs tests/cotex.test.cjs tests/sources.test.cjs tests/window.test.cjs tests/platform.test.cjs tests/lifecycle.test.cjs",
     "test:ui": "node tests/e2e.cjs",
-    "dist": "npm run build && electron-builder --win portable nsis --x64"
+    "dist": "npm run build && electron-builder",
+    "dist:win": "npm run build && electron-builder --win portable nsis --x64",
+    "dist:mac": "npm run build && electron-builder --mac --arm64 --x64",
+    "test:mac": "node tests/macos-ui.cjs"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
@@ -65,6 +68,17 @@
       "deleteAppDataOnUninstall": false,
       "shortcutName": "Cotex"
     },
-    "electronDist": "node_modules/electron/dist"
+    "mac": {
+      "category": "public.app-category.books",
+      "icon": "assets/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "Cotex-${version}-mac-${arch}.${ext}"
+    },
+    "dmg": {
+      "title": "Cotex ${version}"
+    }
   }
 }

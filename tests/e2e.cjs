@@ -36,7 +36,7 @@ async function launch(){
   await expect(summary).toBeVisible();
   await p.keyboard.press('Space');
   await expect(p.locator('.prose').first()).toBeVisible();
-  await p.keyboard.press('Control+d');await expect(p.locator('.toast')).toContainText('书签');
+  await p.keyboard.press('ControlOrMeta+d');await expect(p.locator('.toast')).toContainText('书签');
   const firstChapter=p.locator('.chapter').first();
   await p.getByRole('button',{name:'定位下一章',exact:true}).click();
   await expect(firstChapter).toHaveAttribute('id','chapter-12');
@@ -69,7 +69,7 @@ async function launch(){
   await p.keyboard.press('Space');
   await expect(p.locator('.toc-panel')).toHaveCount(0);
   await expect(summary).toHaveCount(0);
-  await p.getByRole('button',{name:'搜索小说库 Ctrl+K'}).click();await expect(p.getByRole('dialog')).toBeVisible();await p.getByRole('textbox',{name:'搜索书名或作者'}).fill('红楼');await expect(p.locator('.library-book')).toHaveCount(1);
+  await p.getByRole('button',{name:'搜索小说库 '+(process.platform==='darwin'?'⌘':'Ctrl')+'+K'}).click();await expect(p.getByRole('dialog')).toBeVisible();await p.getByRole('textbox',{name:'搜索书名或作者'}).fill('红楼');await expect(p.locator('.library-book')).toHaveCount(1);
   await p.getByRole('dialog',{name:'搜索资料'}).press('Space');
   await expect(p.getByRole('dialog',{name:'搜索资料'})).toBeVisible();
   await expect(summary).toHaveCount(0);
@@ -90,7 +90,7 @@ async function launch(){
    const state=await window.desk.state();
    return state.books.find(b=>b.source.id==='gutenberg'&&b.source.remoteId==='23962').progress.chapter;
   });
-  await p.keyboard.press('Control+k');await p.getByRole('textbox',{name:'搜索书名或作者'}).fill('西游');await p.locator('.library-book').click();
+  await p.keyboard.press('ControlOrMeta+k');await p.getByRole('textbox',{name:'搜索书名或作者'}).fill('西游');await p.locator('.library-book').click();
   await expect(p.locator('.chapter').first()).toHaveAttribute('id','chapter-'+journeyChapter);
   await p.getByRole('textbox',{name:'搜索章节',exact:true}).fill('1');await p.getByRole('textbox',{name:'搜索章节',exact:true}).press('Enter');const multiple=await p.locator('.chapter-search-results').count();if(multiple)await p.locator('.chapter-search-results>button').first().click();
   await p.screenshot({path:path.join(results,'05-final.png')});

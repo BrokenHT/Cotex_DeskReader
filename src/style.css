@@ -56,3 +56,7 @@
 
 .theme-dark .progress-track{stroke:#505050}
 .theme-dark .progress-diamond{fill:#a8a8a8}
+
+/* Leave room for the native macOS traffic lights. */
+.platform-mac .titlebar{padding-left:82px}
+.platform-mac{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
