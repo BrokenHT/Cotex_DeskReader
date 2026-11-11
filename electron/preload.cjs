@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('desk',{
  chapter:(id,index)=>call('chapter',id,index),find:(id,q)=>call('find',id,q),refresh:id=>call('refresh',id),
  export:id=>call('export',id),backup:()=>call('backup'),restore:()=>call('restore'),
  external:url=>call('external',url),window:action=>call('window',action),menu:name=>call('menu',name),
- onAction:fn=>{const handler=(_,a)=>fn(a);ipcRenderer.on('action',handler);return ()=>ipcRenderer.removeListener('action',handler);}
+ onAction:fn=>{const handler=(_,a)=>fn(a);ipcRenderer.on('action',handler);return ()=>ipcRenderer.removeListener('action',handler);},
+ legadoSettings:()=>call('legado-settings'),legadoConfig:p=>call('legado-config',p),legadoShelf:()=>call('legado-shelf'),legadoProgress:id=>call('legado-progress',id),hasChapterText:(id,i)=>call('chapter-has-text',id,i),legadoTest:()=>call('legado-test')
+
 });
