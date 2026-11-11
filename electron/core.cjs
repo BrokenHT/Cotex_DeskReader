@@ -4,6 +4,7 @@ const iconv = require('iconv-lite');
 const JSZip = require('jszip');
 const { XMLParser } = require('fast-xml-parser');
 const cheerio = require('cheerio');
+const {resolveEntry,createImageReader}=require('./epub-images.cjs');
 const OpenCC = require('opencc-js');
 const simplify = OpenCC.Converter({from:'tw',to:'cn'});
 const traditional = OpenCC.Converter({from:'cn',to:'tw'});
@@ -98,21 +99,40 @@ async function parseEPUB(bytes,filename) {
   const author=textVal(array(data.metadata?.creator)[0])||'';
   const manifest=new Map(array(data.manifest?.item).map(i=>[i['@_id'],i]));
   const base=path.posix.dirname(opfPath);let chapters=[];
+  const imageReader=createImageReader(zip);
   for(const ref of array(data.spine?.itemref)){
     if(ref['@_linear']==='no')continue;
     const item=manifest.get(ref['@_idref']);if(!item)continue;
-    const rel=path.posix.normalize(path.posix.join(base,decodeURIComponent(item['@_href'].split('#')[0])));
-    if(rel.startsWith('../')||rel.startsWith('/'))continue;
+    const rel=resolveEntry(base,item['@_href']);if(!rel)continue;
     const file=zip.file(rel);if(!file)continue;
     const html=await file.async('string');const $=cheerio.load(html);
     const heading=$('h1,h2,h3').first().text().trim();
-    const content=htmlText($('body').html()||html);
-    let ps=splitLongParagraphs(paragraphs(content));
-    if(heading&&ps[0]===heading)ps=ps.slice(1);
-    if(ps.length&&ps.join('').length>10)chapters.push({title:heading||$('title').text().trim()||'第'+(chapters.length+1)+'节',paragraphs:ps});
+    $('script,style,iframe,object,nav').remove();
+    const marker='COTEX_IMAGE_'+crypto.randomBytes(8).toString('hex')+'_';
+    const pictures=[];
+    const token=async(href,alt)=>{const index=pictures.length;pictures.push(await imageReader.read(href,path.posix.dirname(rel),alt));return '\n'+marker+index+'\n';};
+    for(const node of $('img,svg').toArray()){
+      const el=$(node);let replacement='';
+      if(node.name==='img')replacement=await token(el.attr('src')||el.attr('data-src'),el.attr('alt')||'');
+      else if(el.find('image').length){for(const img of el.find('image').toArray()){const i=$(img);replacement+=await token(i.attr('href')||i.attr('xlink:href'),'');}}
+      else replacement=await token('data:image/svg+xml;base64,'+Buffer.from($.html(node)).toString('base64'),el.find('title').text());
+      el.replaceWith(replacement);
+    }
+    const content=htmlText($('body').html()||$.html());
+    let ps=[],images=[];
+    for(const line of paragraphs(content)){
+      if(line.startsWith(marker)&&/^\d+$/.test(line.slice(marker.length))){
+        const image=pictures[Number(line.slice(marker.length))];if(!image)continue;
+        let group=images.at(-1);if(!group||group.paragraph!==ps.length){group={paragraph:ps.length,items:[]};images.push(group);}group.items.push(image);
+      }else ps.push(...splitLongParagraphs([line]));
+    }
+    if(heading&&ps[0]===heading){ps=ps.slice(1);images=images.map(g=>({...g,paragraph:Math.max(0,g.paragraph-1)}));}
+    // Coalesce pictures separated only by the chapter heading.
+    images=images.reduce((out,g)=>{if(out.at(-1)?.paragraph===g.paragraph)out.at(-1).items.push(...g.items);else out.push(g);return out;},[]);
+    if(ps.length||images.length)chapters.push({title:heading||$('title').text().trim()||'第'+(chapters.length+1)+'节',paragraphs:ps,images,epubPath:rel});
   }
-  if(!chapters.length)throw new Error('EPUB 没有可读取的文字正文。');
-  return {title:safeText(title),author:safeText(author),chapters,format:'EPUB'};
+  if(!chapters.length)throw new Error('EPUB 没有可读取的正文或图片。');
+  return {title:safeText(title),author:safeText(author),chapters,format:'EPUB',contentVersion:2,media:imageReader.media};
 }
 function finalizeBook(parsed,identity,source={id:'local',name:'本地导入'}) {
   const id=uid(identity);

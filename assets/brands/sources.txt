@@ -1,0 +1,14 @@
+品牌图形来源与处理记录
+
+WorkBuddy
+来源：本机桌面 WorkBuddy 快捷方式指向 E:/WorkBuddy/WorkBuddy.exe。
+原始矢量素材：E:/WorkBuddy/resources/app.asar 内 renderer/assets/workbuddy-app-icon-CEG80LXE.svg。
+workbuddy-original.svg 保留完整原图。
+workbuddy-mark.svg 保留原图的前景路径、渐变、变换和裁切，移除背景色层；界面填充灰色作为对话头像，个人头像填充用户选择的颜色。
+
+DeepSeek
+来源：https://github.com/deepseek-ai/awesome-deepseek-integration/blob/main/docs/_logo%20svg/ICON.svg
+下载：https://raw.githubusercontent.com/deepseek-ai/awesome-deepseek-integration/main/docs/_logo%20svg/ICON.svg
+assets/brands/deepseek.svg 为官方原始文件，使用 CSS 蒙版显示为界面文字颜色，保留原轮廓和比例。
+
+以上图形仅用于用户指定的本机阅读器外观；模型、状态与品牌文字不表示已接入对应服务。图形权利属于各自权利人。

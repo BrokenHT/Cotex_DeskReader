@@ -25,7 +25,7 @@ const before = JSON.parse(fs.readFileSync(path.join(data,'library.json')));
   expect(state.settings.fontSize).toBe(14);
   const activeBefore=before.books.find(b=>b.id===before.activeId);
   await expect(p.locator('.chapter').first()).toHaveAttribute('id','chapter-'+activeBefore.progress.chapter);
-  await p.getByTitle('关于 Cotex',{exact:true}).click();
+  await a.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.send('action','about'));
   await expect(p.getByRole('dialog')).toContainText(version);
   expect(await p.locator('.app-logo').evaluate(img=>img.complete&&img.naturalWidth>0)).toBe(true);
   await p.getByRole('button',{name:'知道了'}).click();
