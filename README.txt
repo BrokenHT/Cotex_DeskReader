@@ -1,5 +1,5 @@
 Cotex 1.0.0
-Windows 小说阅读器，采用工作聊天界面。独立应用，与 OpenAI 无隶属关系。
+Windows / macOS 小说阅读器，采用工作聊天界面。独立应用，与 OpenAI 无隶属关系。
 
 使用
 - “新聊天”：导入 TXT / 无 DRM 的文字 EPUB。也可拖入文件。
@@ -9,7 +9,8 @@ Windows 小说阅读器，采用工作聊天界面。独立应用，与 OpenAI �
 - 点击用时行收起或展开本章。在阅读界面按空格切换工作摘要。按 Page Down 或使用滚轮向下阅读。
 - Ctrl+O 导入，Ctrl+K 书库，Ctrl+F 章节搜索，Ctrl+D 书签，Alt+左右切章。
 - 自动保存章节与段落位置；设置内可备份、合并恢复书库、导出已缓存文本。
-- 本地数据位于 %APPDATA%\DeskReader。原始导入文件不修改，移出书库的数据保留在 trash。
+- macOS 快捷键使用 Command 替代 Ctrl，Option 替代 Alt；⌘W 关闭窗口，⌘Q 退出，关闭窗口后可从 Dock 重新打开。
+- 本地数据位于 Windows 的 %APPDATA%\DeskReader 或 macOS 的 ~/Library/Application Support/DeskReader。原始导入文件不修改，移出书库的数据保留在 trash。
 - 单文件上限 60 MB；EPUB 解压资源总量上限 150 MB。支持 UTF-8、GB18030、UTF-16。
 
 书源
@@ -30,7 +31,7 @@ https://zh.wikisource.org/
 工作提示、模型名称与完成摘要为界面展示，不调用 AI，也不会上传本地小说。联网搜索会向所选书源发送搜索词。
 
 开发与构建
-需要 Node.js 22.12+ 和 Windows x64。
+需要 Node.js 22.12+；支持 Windows x64 和 macOS Apple Silicon / Intel。
   npm ci
   npm run build
   npm start
@@ -41,11 +42,15 @@ https://zh.wikisource.org/
   node node_modules/electron/cli.js tests/expanded-network.cjs
   node tests/sources-ui.cjs
   node scripts/build-icon.cjs
-  npm run dist
+  npm run dist          # 构建当前系统
+  npm run dist:win      # Windows x64
+  npm run dist:mac      # 在 Mac 上构建 arm64 / x64 的 DMG 和 ZIP
+  npm run test:mac      # macOS 专项桌面测试
 若 npm 的脚本权限策略未运行 Electron 安装脚本：
   node node_modules/electron/install.js
 
 构建输出在 release/。Portable.exe 为免安装自解压程序，Setup.exe 为按用户安装程序。两者共用 %APPDATA%\DeskReader（为兼容旧版，保留原数据目录）。未配置商业代码签名证书。
+macOS 安装：打开对应架构的 DMG，将 Cotex 拖入应用程序。正式分发需要 Apple Developer 签名和公证；本地构建默认未公证。Windows/Mac 之间通过书库备份与恢复迁移数据。
 开发时可以设置 DESKREADER_DEV_URL=http://127.0.0.1:5173，并运行 npm run dev 与 npm start。测试通过 DESKREADER_DATA 将数据隔离到 test-results/。
 
 实现与验证

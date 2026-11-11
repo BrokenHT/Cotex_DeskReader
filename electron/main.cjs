@@ -5,18 +5,24 @@ const {parseTXT,parseEPUB,finalizeBook,chapterMatches,MAX_BYTES,uid}=require('./
 const {Store}=require('./store.cjs');
 const {Sources,SOURCE_LIST,isSourceURL,withCatalog}=require('./sources.cjs');
 const {readWindowState,rememberWindow}=require('./window-state.cjs');
-let win,store,sources,closeAllowed=false;
+const {windowOptions,menuDefinitions,applicationMenu}=require('./platform.cjs');
+const isMac=process.platform==='darwin';
+let win,store,sources,closeAllowed=false,quitting=false,rendererReady=false;
+const pendingActions=[];
 app.setName('Cotex');
 const dev=process.env.COTEX_DEV_URL||process.env.DESKREADER_DEV_URL;
 const testData=process.env.COTEX_DATA||process.env.DESKREADER_DATA;
 if(testData)app.setPath('userData',path.resolve(testData));
 else app.setPath('userData',path.join(app.getPath('appData'),'DeskReader'));
-app.setAppUserModelId('local.deskreader.app');
+if(process.platform==='win32')app.setAppUserModelId('local.deskreader.app');
 const only=app.requestSingleInstanceLock();
 if(!only)app.quit();
-app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus();}});
+app.on('second-instance',()=>{if(!win&&store)createWindow();if(win){if(win.isMinimized())win.restore();win.show();win.focus();}});
 const contentFile=path.join(__dirname,'../dist/index.html');
-const send=a=>win?.webContents.send('action',a);
+function send(a){
+ if(!win){if(!app.isReady()||!store)return;createWindow();}
+ if(rendererReady)win.webContents.send('action',a);else pendingActions.push(a);
+}
 function handler(name,fn){ipcMain.handle(name,async(e,...args)=>{
  const url=e.senderFrame?.url||'';
  if(e.sender!==win?.webContents||e.senderFrame!==e.sender.mainFrame||!(url===pathToFileURL(contentFile).href||(dev&&url.startsWith(dev))))throw new Error('非法请求');
@@ -34,6 +40,7 @@ async function imports(paths){
 }
 async function chooseImport(){const r=await dialog.showOpenDialog(win,{title:'导入本地小说',properties:['openFile','multiSelections'],filters:[{name:'小说文件',extensions:['txt','epub']}]});return r.canceled?{books:[],errors:[]}:imports(r.filePaths);}
 function register(){
+ handler('renderer-ready',()=>{rendererReady=true;for(const a of pendingActions.splice(0))send(a);});
  handler('state',()=>({...store.state(),sources:SOURCE_LIST}));
  handler('open',id=>{const b=store.get(id);store.db.activeId=id;store.write();return b;});
  handler('import',chooseImport);
@@ -57,33 +64,36 @@ function register(){
  handler('restore',async()=>{const r=await dialog.showOpenDialog(win,{properties:['openFile'],filters:[{name:'书库备份',extensions:['json']}]});if(r.canceled)return null;const f=r.filePaths[0];if((await fs.promises.stat(f)).size>300*1024*1024)throw new Error('备份文件过大');const d=JSON.parse(await fs.promises.readFile(f,'utf8'));if(d.format!=='DeskReaderBackup'||d.version!==1||!Array.isArray(d.books))throw new Error('不是有效的 Cotex / DeskReader 备份');for(const b of d.books){if(!/^[a-f0-9]{24}$/.test(b.id)||!Array.isArray(b.chapters)||!b.chapters.length||typeof b.title!=='string'||!b.progress||!Array.isArray(b.bookmarks)||!Array.isArray(b.collapsed))throw new Error('备份内容不完整');for(const c of b.chapters)if(typeof c.title!=='string'||(c.paragraphs!==null&&(!Array.isArray(c.paragraphs)||c.paragraphs.some(p=>typeof p!=='string'))))throw new Error('备份章节格式有误');}for(const b of d.books)store.add(b);store.settings(d.settings||{});return store.state();});
  handler('window',a=>{if(a==='minimize')win.minimize();if(a==='maximize')win.isMaximized()?win.unmaximize():win.maximize();if(a==='close'){closeAllowed=true;win.close();}});
  handler('menu',name=>{
-  const definitions={
-   file:[{label:'新聊天',accelerator:'CmdOrCtrl+O',click:()=>send('import')},{label:'搜索',accelerator:'CmdOrCtrl+K',click:()=>send('search')},{type:'separator'},{label:'导出当前文本',click:()=>send('export')},{label:'备份书库',click:()=>send('backup')},{label:'恢复书库',click:()=>send('restore')},{type:'separator'},{label:'退出',role:'quit'}],
-   edit:[{role:'undo',label:'撤销'},{role:'redo',label:'重做'},{type:'separator'},{role:'cut',label:'剪切'},{role:'copy',label:'复制'},{role:'paste',label:'粘贴'},{role:'selectAll',label:'全选'}],
-   view:[{label:'侧边栏',click:()=>send('sidebar')},{label:'章节目录',click:()=>send('toc')},{label:'全部收起',click:()=>send('collapse')},{label:'工作摘要（空格）',click:()=>send('boss')},{type:'separator'},{label:'设置',click:()=>send('settings')},{role:'togglefullscreen',label:'全屏'}],
-   help:[{label:'使用说明',click:()=>send('help')},{label:'关于 Cotex',click:()=>send('about')}]
-  };if(definitions[name])Menu.buildFromTemplate(definitions[name]).popup({window:win});
+  const definitions=menuDefinitions(send);if(definitions[name])Menu.buildFromTemplate(definitions[name]).popup({window:win});
  });
 }
 app.whenReady().then(()=>{
+ if(!only)return;
  store=new Store(app.getPath('userData'));sources=new Sources((url,init)=>net.fetch(url,init));
  if(!store.db.seeded){
   const seeds=[['watermargin','23863','水浒传（七十回本）','施耐庵','检查原表'],['threekingdoms','23950','三国演义','罗贯中','分类细则最终版'],['redchamber','24264','红楼梦','曹雪芹','整理需求文档'],['journey','23962','西游记','吴承恩','核对项目资料']];
   for(const [name,id,title,author,alias] of seeds){const file=path.join(__dirname,'../assets/'+name+'.txt');if(fs.existsSync(file)){const b=finalizeBook({...parseTXT(fs.readFileSync(file),title+'.txt',{gutenberg:true,wrapped:true}),author},'gutenberg:'+id,{id:'gutenberg',name:'Project Gutenberg',remoteId:id,url:'https://www.gutenberg.org/ebooks/'+id});b.alias=alias;store.add(b);}}
   store.db.seeded=true;store.write();
  }
- Menu.setApplicationMenu(null);
+ Menu.setApplicationMenu(isMac?Menu.buildFromTemplate(applicationMenu(send)):null);
  session.defaultSession.setPermissionRequestHandler((wc,permission,cb)=>cb(false));
  session.defaultSession.setPermissionCheckHandler(()=>false);
+ register();
+ createWindow();
+}).catch(e=>{dialog.showErrorBox('Cotex 启动失败',e.message);app.quit();});
+function createWindow(){
+ closeAllowed=false;rendererReady=false;
  const stateFile=path.join(app.getPath('userData'),'window-state.json');
  const {maximized,...bounds}=readWindowState(stateFile,screen);
- win=new BrowserWindow({...bounds,minWidth:Math.min(720,bounds.width),minHeight:Math.min(580,bounds.height),frame:false,backgroundColor:'#f8f0f6',title:'Cotex',icon:path.join(__dirname,'../assets/icon.png'),show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,spellcheck:false}});
+ win=new BrowserWindow({...bounds,minWidth:Math.min(720,bounds.width),minHeight:Math.min(580,bounds.height),...windowOptions(process.platform),backgroundColor:'#f8f0f6',title:'Cotex',icon:path.join(__dirname,'../assets/icon.png'),show:false,webPreferences:{preload:path.join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,spellcheck:false}});
  rememberWindow(win,stateFile);
  win.webContents.setZoomFactor(1);
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());
- register();
+ win.on('closed',()=>{win=null;rendererReady=false;if(quitting)app.quit();});
  win.on('close',event=>{if(!closeAllowed&&!win.webContents.isDestroyed()){event.preventDefault();send('prepare-close');}});
  win.once('ready-to-show',()=>{if(maximized)win.maximize();win.show();});
  if(dev)win.loadURL(dev);else win.loadFile(contentFile);
-}).catch(e=>{dialog.showErrorBox('Cotex 启动失败',e.message);app.quit();});
-app.on('window-all-closed',()=>app.quit());
+}
+app.on('before-quit',()=>{quitting=true;});
+app.on('activate',()=>{if(store&&!quitting){if(!win)createWindow();else{if(win.isMinimized())win.restore();win.show();win.focus();}}});
+app.on('window-all-closed',()=>{if(!isMac||quitting)app.quit();});

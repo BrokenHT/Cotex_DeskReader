@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const call=(name,...args)=>ipcRenderer.invoke(name,...args);
 contextBridge.exposeInMainWorld('desk',{
+ platform:process.platform,ready:()=>call('renderer-ready'),
  state:()=>call('state'),open:id=>call('open',id),import:()=>call('import'),
  drop:files=>call('import-paths',Array.from(files).map(f=>webUtils.getPathForFile(f))),
  patch:(id,p)=>call('patch',id,p),settings:p=>call('settings',p),remove:id=>call('remove',id),
