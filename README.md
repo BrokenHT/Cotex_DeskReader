@@ -7,10 +7,11 @@ Cotex 是一款 Windows 小说阅读器，提供 Codex 和 WorkBuddy 两套工�
 - 用目录、章号或标题关键词跳转，添加书签，自动保存章节和段落位置。
 - 搜索公版名著和部分中文书源的公开章节。书库和阅读进度保存在本地。
 - 自定义头像颜色和文字，WorkBuddy 外观还支持上传头像及修改昵称。
+- Codex 外观提供 17 种工作提示，工作摘要中的蓝色文件条目可点击预览摘要模板。
 
 ## 下载与使用
 
-前往 [最新版本下载页](https://github.com/BrokenHT/Cotex_DeskReader/releases/latest)。安装版为 `Cotex-1.1.1-Setup.exe`，免安装版为 `Cotex-1.1.1-Portable.exe`。
+前往 [最新版本下载页](https://github.com/BrokenHT/Cotex_DeskReader/releases/latest)。安装版为 `Cotex-1.1.2-Setup.exe`，免安装版为 `Cotex-1.1.2-Portable.exe`。
 
 启动后点击「新聊天／新建任务」导入一本书。在「设置 → 界面外观」中切换 Codex / WorkBuddy。阅读时可按空格切换工作摘要，或在底部输入框输入章号或标题关键词，按 Enter 跳转。
 

@@ -1,6 +1,6 @@
 {
   "name": "cotex",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A local-first desktop novel reader with a familiar work chat interface",
   "private": true,
   "main": "electron/main.cjs",
@@ -12,7 +12,8 @@
     "start": "electron .",
     "test": "node --test tests/core.test.cjs tests/cotex.test.cjs tests/sources.test.cjs tests/window.test.cjs tests/epub-images.test.cjs",
     "test:ui": "node tests/e2e.cjs",
-    "dist": "npm run build && electron-builder --win portable nsis --x64"
+    "dist": "npm run build && electron-builder --win portable nsis --x64",
+    "test:work-summary": "node tests/work-summary.e2e.cjs"
   },
   "dependencies": {
     "cheerio": "^1.1.2",

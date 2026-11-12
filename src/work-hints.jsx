@@ -1,5 +1,5 @@
 import React from 'react';
-import {Globe,FileText,Image,SquareTerminal,FolderOpen,Search,ListChecks,CodeXml,Layers,Database,CheckCheck} from 'lucide-react';
+import {Globe,FileText,Image,SquareTerminal,FolderOpen,Search,ListChecks,CodeXml,Layers,Database,CheckCheck,Pencil,FileCheck2,Files,Link2,Save} from 'lucide-react';
 import {LayoutGrid} from './ui-icons.jsx';
 
 // A round, open-ended eye matching the validation indicator in the reference.
@@ -20,7 +20,28 @@ const buddyHints=[
  ['database',Database,'整理数据，更新内容索引'],
  ['complete',CheckCheck,'已完成核验，保存工作记录'],
 ];
-const codexHints=['已使用 浏览器','已使用 浏览器和文档加载了工具运行了命令','核对资料结构与上下文','已完成内容索引','已使用 浏览器','正在检查引用与记录'];
+function BrowserTool({size=16}) {
+ return <span className="browser-icon" aria-hidden="true"><FileText size={size-2}/><span/></span>;
+}
+const codexHints=[
+ ['document',FileText,'读取了文件'],
+ ['terminal',SquareTerminal,'运行了命令'],
+ ['search',Search,'搜索了文件'],
+ ['folder',FolderOpen,'查看了资料目录'],
+ ['plan',ListChecks,'更新了工作计划'],
+ ['document-check',FileCheck2,'检查了文档'],
+ ['compare',Files,'对比了文件内容'],
+ ['image',Image,'已查看图片'],
+ ['code',CodeXml,'检查了内容结构'],
+ ['references',Link2,'核对了引用与记录'],
+ ['save',Save,'已保存工作记录'],
+ ['document-tool',LayoutGrid,'已使用 文档加载了工具运行了命令'],
+ ['browser',BrowserTool,'已使用 浏览器运行了命令'],
+ ['complete',CheckCheck,'已完成内容核验'],
+ ['database',Database,'整理了数据索引'],
+ ['edit',Pencil,'编辑了文件运行了命令'],
+ ['tools',LayoutGrid,'已使用 浏览器和文档加载了工具运行了命令'],
+];
 export function WorkHint({seed=0,buddy=false}) {
  if(buddy){
   // Stable per paragraph: scrolling, folding and switching skins do not shuffle
@@ -28,6 +49,7 @@ export function WorkHint({seed=0,buddy=false}) {
   const [kind,Icon,label]=buddyHints[(Math.abs(Math.trunc(seed))*7+1)%buddyHints.length];
   return <div className="work-hint" data-hint-icon={kind} aria-hidden="true"><Icon size={16} strokeWidth={1.65}/><span>{label}</span></div>;
  }
- const n=(seed*17+3)%codexHints.length;
- return <div className="work-hint" aria-hidden="true">{n===0||n===4?<span className="browser-icon"><FileText size={14}/><span/></span>:<LayoutGrid size={16} strokeWidth={1.6}/>}<span>{codexHints[n]}</span></div>;
+ // Keep a paragraph's status stable across renders, scrolling and skin changes.
+ const [kind,Icon,label]=codexHints[(Math.abs(Math.trunc(seed))*7+1)%codexHints.length];
+ return <div className="work-hint" data-hint-icon={kind} aria-hidden="true"><Icon size={16} strokeWidth={1.6}/><span>{label}</span></div>;
 }
