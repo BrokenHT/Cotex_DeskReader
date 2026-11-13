@@ -1,0 +1,122 @@
+.appearance-workbuddy .sidebar-header,
+.appearance-workbuddy .sidebar-actions,
+.appearance-workbuddy .buddy-profile {
+  flex-shrink: 0;
+}
+
+.appearance-workbuddy .sidebar-actions {
+  padding-bottom: 17px;
+}
+
+.appearance-workbuddy .sidebar-list {
+  min-height: 0;
+  margin-top: 0;
+  scrollbar-width: thin;
+}
+
+.buddy-promo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-shrink: 0;
+  height: 112px;
+  margin: 4px 12px;
+  padding: 14px 14px 9px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--text);
+}
+
+.buddy-promo-copy strong {
+  display: block;
+  padding-right: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.buddy-promo-copy p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.buddy-promo-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.buddy-promo-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.buddy-promo-dots button {
+  display: grid;
+  place-items: center;
+  min-width: 4px;
+  height: 10px;
+  padding: 0;
+  border-radius: 4px;
+}
+
+.buddy-promo-dots button::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 4px;
+  background: #dedede;
+}
+
+.buddy-promo-dots button[aria-pressed="true"]::before {
+  width: 12px;
+  background: #36c9af;
+}
+
+.buddy-promo-action {
+  min-height: 24px;
+  padding: 3px 12px;
+  border-radius: 6px;
+  background: #181818;
+  color: white;
+  font-size: 10px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.buddy-promo-action:hover {background: #363636}
+.theme-dark .buddy-promo-action {background: #e5e5e5;color: #181818}
+.theme-dark .buddy-promo-action:hover {background: white}
+.theme-dark .buddy-promo-dots button::before {background: #6d6d6d}
+.theme-dark .buddy-promo-dots button[aria-pressed="true"]::before {background: #36c9af}
+
+.buddy-promo-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 5px;
+  color: var(--muted);
+}
+
+.buddy-promo-close:hover {background: var(--hover)}
+
+@media (max-height: 680px) {
+  .appearance-workbuddy .sidebar-actions {padding-bottom: 8px}
+  .buddy-promo {height: 98px;padding-top: 8px;padding-bottom: 7px}
+  .buddy-promo-copy p {line-height: 17px}
+}

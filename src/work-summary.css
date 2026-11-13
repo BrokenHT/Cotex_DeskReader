@@ -6,7 +6,7 @@
 .summary-file-link{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:0;color:#0065bd;font-size:inherit;font-weight:600;line-height:1.7;text-align:left;border-radius:3px}
 .summary-file-link span{min-width:0;overflow-wrap:anywhere}
 .summary-file-link:hover{color:#004d95;background:none}
-.summary-file-link:hover span{text-decoration:underline;text-underline-offset:3px}
+.summary-file-link:hover span,.summary-file-link:focus-visible span{text-decoration:underline dashed currentColor 1px;text-underline-offset:3px}
 .summary-file-link:focus-visible{outline:2px solid #7fb0e3;outline-offset:5px}
 .summary-pdf-icon{display:block;flex-shrink:0}
 .theme-dark .summary-file-link{color:#7db8ff}
@@ -23,3 +23,42 @@
 .summary-document p{margin:0 0 10px}
 .summary-document-txt{font-family:Consolas,"Microsoft YaHei",monospace}
 @media(max-width:760px){.summary-file-preview{padding:16px}.summary-document{padding:16px}.summary-file-link{gap:6px}}
+
+.summary-change-card {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 18px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+
+.summary-change-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--hover);
+  color: var(--muted);
+}
+
+.summary-change-info {flex: 1 1 150px;min-width: 0}
+.summary-change-title {font-size: 14px;font-weight: 500;line-height: 1.45;overflow-wrap: anywhere}
+.summary-change-counts {display: flex;gap: 5px;margin-top: 3px;line-height: 1.4}
+.summary-change-actions {display: flex;gap: 10px;margin-left: auto}
+.summary-change-actions button {display: inline-flex;align-items: center;gap: 4px;padding: 4px 8px;white-space: nowrap;border-radius: 9px}
+.summary-change-actions button:hover {background: var(--hover)}
+.summary-change-view {border: 1px solid var(--line)}
+.summary-change-counts span:first-child,.diff-add {color: #008641}
+.summary-change-counts span:last-child,.diff-remove {color: #c62a27}
+.theme-dark .summary-change-counts span:first-child,.theme-dark .diff-add {color: #6bd892}
+.theme-dark .summary-change-counts span:last-child,.theme-dark .diff-remove {color: #ff8a83}
+.summary-change-note {margin: -10px 0 14px;color: var(--muted);font-size: 13px}
+.summary-diff {margin: 0 0 18px;padding: 12px 0;overflow: auto;border: 1px solid var(--line);border-radius: 9px;font: 13px/1.65 Consolas,"Cotex Noto Sans SC",monospace}
+.summary-diff > span {display: block;padding: 0 12px;min-width: max-content}
+.diff-add {background: #2fba6320}
+.diff-remove {background: #f2535320}

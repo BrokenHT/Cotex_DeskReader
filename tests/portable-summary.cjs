@@ -22,7 +22,7 @@ async function freePort() {
   delete env.DESKREADER_DEV_URL;
   const port = await freePort();
   const endpoint = 'http://127.0.0.1:' + port;
-  const exe = process.env.COTEX_PORTABLE_EXE || path.resolve(__dirname,'../release/Cotex-1.1.2-Portable.exe');
+  const exe = process.env.COTEX_PORTABLE_EXE || path.resolve(__dirname,'../release/Cotex-1.1.4-Portable.exe');
   const child = spawn(exe, ['--remote-debugging-port=' + port], { env, windowsHide: true, stdio: 'ignore' });
   let browser;
   try {
@@ -45,6 +45,17 @@ async function freePort() {
     await expect(workSummary).toContainText('编辑了文件运行了命令');
     await expect(workSummary).toContainText('运行了命令');
     await expect(workSummary.locator('.summary-file-link')).toHaveCount(2);
+    const loadedFont = await page.evaluate(async () => {
+      const fonts = await document.fonts.load('500 14px "Cotex Noto Sans SC"', '已编辑');
+      return fonts.some(font => font.status === 'loaded');
+    });
+    expect(loadedFont).toBe(true);
+    await workSummary.getByRole('button',{name:'查看变更'}).click();
+    const changePreview = page.getByRole('dialog',{name:'查看变更'});
+    await expect(changePreview.locator('.diff-add')).toHaveCount(6);
+    await page.keyboard.press('Escape');
+    await expect(changePreview).toHaveCount(0);
+    await expect(workSummary).toBeVisible();
     await workSummary.locator('.summary-file-link').first().click();
     const preview = page.getByRole('dialog',{name:'工作摘要附件'});
     await expect(preview.locator('.summary-document-pdf')).toBeVisible();
@@ -56,7 +67,13 @@ async function freePort() {
     await page.getByRole('button', {name:'阅读设置',exact:true}).click();
     await page.getByLabel('界面外观',{exact:true}).selectOption('workbuddy');
     await page.keyboard.press('Escape');
-    await expect(page.locator('.buddy-brand small')).toHaveText('V1.1.2');
+    await expect(page.locator('.buddy-brand small')).toHaveText('V1.1.4');
+    const promo = page.getByRole('region',{name:'推广轮播'});
+    await expect(promo).toBeVisible();
+    await promo.getByRole('button',{name:'做任务赢积分好礼',exact:true}).click();
+    await expect(promo.locator('strong')).toHaveText('做任务赢积分好礼');
+    await promo.getByRole('button',{name:'本次隐藏推广轮播'}).click();
+    await expect(promo).toHaveCount(0);
     await expect(page.locator('.composer .reading-progress')).toBeVisible();
     await expect(page.locator('.access-label')).toHaveCSS('color', 'rgb(180, 44, 63)');
     await expect(page.locator('.buddy-send-icon')).toHaveCSS('transform', 'none');
@@ -94,8 +111,8 @@ async function freePort() {
     await expect(summary).toBeVisible();
     await page.keyboard.press('Space');
     await expect(chapter).toHaveAttribute('id', 'chapter-1');
-    fs.writeFileSync(path.resolve(__dirname,'../test-results/portable-work-summary.json'),JSON.stringify({passed:true,version:'1.1.2',summaryPreviews:true,nestedEscape:true,space:true,workbuddy:true},null,2));
-    console.log('PASS: actual Cotex 1.1.2 Portable, expanded work statuses, summary file previews, nested Escape, Space, WorkBuddy assets, profile and navigation.');
+    fs.writeFileSync(path.resolve(__dirname,'../test-results/portable-work-summary.json'),JSON.stringify({passed:true,version:'1.1.4',summaryPreviews:true,nestedEscape:true,space:true,workbuddy:true},null,2));
+    console.log('PASS: actual Cotex 1.1.4 Portable, expanded work statuses, summary file previews, nested Escape, Space, WorkBuddy assets, profile and navigation.');
     const cdp = await browser.newBrowserCDPSession();
     await cdp.send('Browser.close').catch(() => {});
     await Promise.race([new Promise(resolve => child.once('exit', resolve)), delay(1500)]);

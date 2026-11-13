@@ -1,0 +1,65 @@
+@font-face {
+  font-family: "Cotex Noto Sans SC";
+  src: url("../assets/fonts/NotoSansSC.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+.appearance-codex {
+  font-family: "Segoe UI", "Cotex Noto Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+}
+
+.appearance-codex .brand .codex-wordmark {
+  color: var(--text);
+}
+
+.appearance-codex .app-menu button,
+.appearance-codex .sidebar-actions > button,
+.appearance-codex .book-select,
+.appearance-codex .sidebar-link,
+.appearance-codex .user-message,
+.appearance-codex .thought-line,
+.appearance-codex .composer textarea {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.appearance-codex .group-title,
+.appearance-codex .chat-heading {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.appearance-codex .access-label,
+.appearance-codex .model-select,
+.appearance-codex .assistant-actions > span,
+.appearance-codex .summary-change-counts,
+.appearance-codex .summary-change-actions button {
+  font-size: 13px;
+}
+
+.appearance-codex .summary-file-link {
+  font-weight: 500;
+}
+
+.appearance-codex .summary-file-link > svg {
+  width: 14px;
+  height: 14px;
+}
+
+.appearance-codex .summary-text strong {
+  font-weight: 600;
+}
+
+.appearance-codex .boss-content > p {
+  margin: 12px 0 16px;
+}
+
+.appearance-codex .boss-content .work-hint {
+  margin: 14px 0;
+}
+
+.appearance-codex .summary-files {
+  margin: 14px 0 16px;
+}
