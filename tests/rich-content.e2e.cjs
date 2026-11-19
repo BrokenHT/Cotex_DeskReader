@@ -95,29 +95,27 @@ async function launch(data) {
     await expect(page.locator('.rich-math annotation')).toHaveCount(0);
     await expect(page.locator('.rich-math')).not.toContainText('c=x^2');
 
-    await expect(page.locator('.rich-figure img')).toHaveCount(1);
-    await expect(page.locator('.rich-figure img')).toBeVisible();
-    await expect(page.locator('.rich-figure img')).toHaveAttribute('src', /^data:image\/svg\+xml;base64,/);
+    await expect(page.locator('.rich-figure img')).toHaveCount(0);
     await expect(page.locator('.rich-figure figcaption')).toHaveText('图 1 图表');
-    await expect(page.locator('.epub-images')).toHaveCount(0);
 
-    const mediaBlock = page.locator('.rich-media-block');
-    await expect(mediaBlock).toHaveCount(1);
-    const imageToggle = mediaBlock.locator('.image-toggle');
+    const gallery = page.locator('.epub-images');
+    await expect(gallery).toHaveCount(1);
+    const imageToggle = gallery.locator('.image-toggle');
     await expect(imageToggle).toContainText('已查看图片');
     await expect(imageToggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('.rich-figure img')).toBeVisible();
-    await mediaBlock.screenshot({path: path.join(directory, '03-figure.png')});
+    const thumbnail = gallery.locator('.image-thumbnail');
+    await expect(thumbnail).toHaveCount(1);
+    await expect(thumbnail.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml;base64,/);
+    await gallery.screenshot({path: path.join(directory, '03-figure.png')});
     await imageToggle.click();
     await expect(imageToggle).toHaveAttribute('aria-expanded', 'false');
-    await expect(page.locator('.rich-figure img')).toBeHidden();
-    await expect(page.locator('.rich-figure figcaption')).toBeVisible();
+    await expect(thumbnail).toHaveCount(0);
     await imageToggle.click();
     await expect(imageToggle).toHaveAttribute('aria-expanded', 'true');
-    await expect(page.locator('.rich-figure img')).toBeVisible();
+    await expect(thumbnail).toHaveCount(1);
 
     const preview = page.getByRole('dialog', {name: '查看图片'});
-    await page.locator('.rich-figure img').click();
+    await thumbnail.click();
     await expect(preview).toBeVisible();
     await expect(preview.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml;base64,/);
     const stage = await preview.locator('.image-viewer-stage').boundingBox();
@@ -126,13 +124,13 @@ async function launch(data) {
     expect(shown.height).toBeGreaterThan(stage.height * 0.9);
     await page.keyboard.press('Escape');
     await expect(preview).toHaveCount(0);
-    await page.locator('.rich-figure img').focus();
+    await thumbnail.focus();
     await page.keyboard.press('Enter');
     await expect(preview).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(preview).toHaveCount(0);
     await imageToggle.click();
-    await expect(page.locator('.rich-figure img')).toBeHidden();
+    await expect(thumbnail).toHaveCount(0);
 
     await expect(page.locator('.rich-html h2')).toHaveText('小节标题');
     await expect(page.locator('.rich-list li')).toHaveCount(2);
@@ -181,14 +179,15 @@ async function launch(data) {
     ({app, page} = await launch(data));
     await expect(page.locator('.rich-table table')).toBeVisible();
     await expect(page.locator('.rich-math math')).toBeVisible();
-    await expect(page.locator('.rich-figure img')).toBeHidden();
-    await expect(page.locator('.rich-media-block .image-toggle')).toHaveAttribute('aria-expanded', 'false');
-    await page.locator('.rich-media-block .image-toggle').click();
-    await expect(page.locator('.rich-figure img')).toBeVisible();
+    await expect(page.locator('.rich-figure figcaption')).toHaveText('图 1 图表');
+    await expect(page.locator('.epub-images .image-toggle')).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.locator('.image-thumbnail')).toHaveCount(0);
+    await page.locator('.epub-images .image-toggle').click();
+    await expect(page.locator('.image-thumbnail')).toHaveCount(1);
     await expect(page.locator('.rich-note-ref')).toHaveCount(1);
 
     expect(errors).toEqual([]);
-    console.log('PASS: rich EPUB E2E — table, MathML, default-open SVG figure with fold/preview, full-window viewer, heading, list, quote, click/keyboard footnote modal, no duplicate gallery, no page overflow, persisted after restart.');
+    console.log('PASS: rich EPUB E2E — table, MathML, default-open image gallery with fold/preview, full-window viewer, heading, list, quote, click/keyboard footnote modal, no duplicate inline image, no page overflow, persisted after restart.');
     console.log('Screenshots: ' + directory);
   } finally {
     await app.close().catch(() => {});

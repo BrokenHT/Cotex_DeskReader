@@ -223,12 +223,13 @@ function blockText(type, html) {
 // TeX annotations are fallback text for paragraph extraction. Chromium can
 // display them next to the typeset MathML, so strip them from stored rich HTML
 // and report visibility in the same pass.
-function renderRich(html) {
+function renderRich(html, stripImages = false) {
   const $ = cheerio.load('<body>' + String(html || '') + '</body>');
   const root = $('body');
   const visible = root.clone();
   visible.find('img,[data-missing-image],annotation').remove();
   const hasVisible = !!norm(visible.text());
+  if (stripImages) root.find('img,[data-missing-image]').remove();
   root.find('annotation').remove();
   return {html: (root.html() || '').trim(), hasVisible};
 }
@@ -658,12 +659,13 @@ function createRichParser({zip, imageReader}) {
     const emitRich = (type, clean, collected) => {
       const index = paragraphs.length;
       const text = blockText(type, clean);
-      const rendered = renderRich(clean);
-      if (type === 'text' && !rendered.hasVisible) {
+      const rendered = renderRich(clean, collected.length > 0);
+      if ((type === 'text' || collected.length) && !rendered.hasVisible) {
         addPictures(collected, index);
         if (!collected.length && text) paragraphs.push(text);
         return;
       }
+      if (collected.length) addPictures(collected, index);
       rich[index] = {type, html: rendered.html};
       paragraphs.push(text);
     };

@@ -128,7 +128,7 @@ async function parseEPUB(bytes,filename) {
     }
   }
   if(!chapters.length)throw new Error('EPUB 没有可读取的正文或图片。');
-  return {title:safeText(title),author:safeText(author),chapters,format:'EPUB',contentVersion:4,media:imageReader.media};
+  return {title:safeText(title),author:safeText(author),chapters,format:'EPUB',contentVersion:5,media:imageReader.media};
 }
 function finalizeBook(parsed,identity,source={id:'local',name:'本地导入'}) {
   const id=uid(identity);

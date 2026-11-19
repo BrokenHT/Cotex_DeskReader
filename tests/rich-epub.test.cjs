@@ -65,7 +65,7 @@ test('EPUB rich blocks preserve tables, MathML, figures, inline markup, lists, q
     }
   }), 'rich.epub');
 
-  assert.equal(book.contentVersion, 4);
+  assert.equal(book.contentVersion, 5);
   const chapter = chapterByTitle(book, '第一章 结构');
   const blocks = richBlocks(chapter);
   const types = new Set(blocks.map(block => block.type));
@@ -106,12 +106,12 @@ test('EPUB rich blocks preserve tables, MathML, figures, inline markup, lists, q
   const figure = blocks.find(block => block.type === 'figure');
   assert.match(figure.html, /^<figure>/);
   assert.match(figure.html, /<figcaption>图注说明<\/figcaption>/);
-  assert.match(figure.html, /<img data-asset="[a-f0-9]{24}" alt="图示">/);
-  assert.doesNotMatch(figure.html, /\bsrc=/);
+  assert.doesNotMatch(figure.html, /<img\b/);
   assert.equal(chapter.paragraphs[figure.index], '图注说明');
-  assert.ok(book.media[figure.html.match(/data-asset="([a-f0-9]{24})"/)[1]]);
-  assert.ok(!chapter.images.some(group => group.paragraph === figure.index),
-    'figure images render inline and must not be duplicated in the gallery');
+  const imageGroup = chapter.images.find(group => group.paragraph === figure.index);
+  assert.ok(imageGroup, 'figure image should be a gallery group at the figure paragraph');
+  assert.equal(imageGroup.items[0].alt, '图示');
+  assert.ok(book.media[imageGroup.items[0].asset]);
 
   const lists = blocks.filter(block => block.type === 'list');
   assert.equal(lists.length, 2);
@@ -316,7 +316,7 @@ test('EPUB keeps picture-only chapters anchor-only and removes only the title he
     }
   }), 'headings.epub');
 
-  assert.equal(book.contentVersion, 4);
+  assert.equal(book.contentVersion, 5);
   assert.equal(book.chapters.length, 3);
   const cover = book.chapters[0];
   assert.equal(cover.title, '封面');
