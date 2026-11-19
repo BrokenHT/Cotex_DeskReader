@@ -21,11 +21,10 @@ async function ring(p,buddy){const ring=p.getByRole('progressbar',{name:'小说�
   await ring(p,false);
   await a.evaluate(({dialog},file)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[file]});},fixture);
   await p.getByRole('button',{name:'新聊天',exact:true}).click();await expect(p.locator('.chapter').first()).toHaveAttribute('id','chapter-0');
-  const cover=p.locator('#chapter-0 .epub-images');await expect(cover.locator('.image-thumbnail')).toHaveCount(0);await cover.locator('.image-toggle').click();
-  await expect(cover.locator('.image-thumbnail')).toHaveCount(1);
+  await expect(p.locator('#chapter-0 .image-thumbnail')).toHaveCount(1);
   await expect.poll(()=>p.locator('#chapter-0 .image-thumbnail img').evaluate(img=>img.naturalWidth)).toBe(480);
   await jump(p,'第一章');await expect(p.locator('.chapter').first()).toHaveAttribute('id','chapter-1');
-  const group=p.locator('#chapter-1 .epub-images');await expect(group.locator('.image-thumbnail')).toHaveCount(0);await group.locator('.image-toggle').click();await expect(group.locator('.image-thumbnail')).toHaveCount(2);
+  const group=p.locator('#chapter-1 .epub-images');await expect(group.locator('.image-thumbnail')).toHaveCount(2);
   const order=await p.locator('#chapter-1 .prose').evaluate(el=>[...el.children].filter(e=>e.matches('p,.epub-images')).map(e=>e.tagName));expect(order).toEqual(['P','DIV','P','P']);
   await screenshot(p,'codex-images');await ring(p,false);
   await group.getByRole('button',{name:'已查看图片 · 2 张'}).click();await expect(group.locator('.image-thumbnail')).toHaveCount(0);
@@ -53,7 +52,7 @@ async function ring(p,buddy){const ring=p.getByRole('progressbar',{name:'小说�
   await a.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1340,760));await p.getByRole('button',{name:'切换侧边栏 Ctrl+B',exact:true}).click();
   await a.evaluate(({dialog},file)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:file});},backup);
   await p.getByRole('button',{name:'阅读设置',exact:true}).click();await p.getByRole('button',{name:'备份书库',exact:true}).click();await expect(p.locator('.toast')).toContainText('书库备份已保存');await p.keyboard.press('Escape');
-  const saved=JSON.parse(fs.readFileSync(backup));expect(saved.settings.appearance).toBe('workbuddy');expect(saved.settings.buddyAvatarImage).toMatch(/^data:image\/png/);const savedBook=saved.books.find(b=>b.title==='图文阅读测试');expect(Object.keys(savedBook.media)).toHaveLength(2);expect(savedBook.expandedImages||[]).not.toContain('1:1');
+  const saved=JSON.parse(fs.readFileSync(backup));expect(saved.settings.appearance).toBe('workbuddy');expect(saved.settings.buddyAvatarImage).toMatch(/^data:image\/png/);const savedBook=saved.books.find(b=>b.title==='图文阅读测试');expect(Object.keys(savedBook.media)).toHaveLength(2);expect(savedBook.collapsedImages).toContain('1:1');
   await skin(p,'codex');await expect(p.locator('.rail .profile-avatar')).toHaveText('AB');await ring(p,false);await skin(p,'workbuddy');
   await a.close();({a,p}=await launch(path.join(directory,'data')));await expect(p.locator('.app')).toHaveClass(/appearance-workbuddy/);await expect(p.locator('#chapter-1 .epub-images')).toHaveClass(/images-collapsed/);await expect(p.locator('.buddy-profile img')).toBeVisible();
   await a.close();({a,p}=await launch(path.join(directory,'restored')));

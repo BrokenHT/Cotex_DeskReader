@@ -57,8 +57,6 @@ test('collapsed image state accepts rich blocks that contain images',()=>{
   store.add(book);
   store.patch(BOOK_ID,{collapsedImages:['0:0','0:1','bad']});
   assert.deepEqual(store.get(BOOK_ID).collapsedImages,['0:0']);
-  store.patch(BOOK_ID,{expandedImages:['0:0','0:1','bad']});
-  assert.deepEqual(store.get(BOOK_ID).expandedImages,['0:0']);
 });
 
 test('validateBackup accepts rich/notes and legacy chapters without them',()=>{
