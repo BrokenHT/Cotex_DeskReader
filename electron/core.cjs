@@ -6,6 +6,7 @@ const { XMLParser } = require('fast-xml-parser');
 const cheerio = require('cheerio');
 const {resolveEntry,createImageReader}=require('./epub-images.cjs');
 const {createRichParser}=require('./rich-content.cjs');
+const {readTOC}=require('./epub-toc.cjs');
 const OpenCC = require('opencc-js');
 const simplify = OpenCC.Converter({from:'tw',to:'cn'});
 const traditional = OpenCC.Converter({from:'cn',to:'tw'});
@@ -111,9 +112,20 @@ async function parseEPUB(bytes,filename) {
     spine.push(rel);
   }
   await richParser.premarkNotes(spine);
+  let toc = [];
+  try { toc = await readTOC({zip, opfPath, pkg: data}); } catch {}
+  const spineSet = new Set(spine);
+  const tocByPath = new Map();
+  for (const entry of toc) {
+    if (!spineSet.has(entry.relPath)) continue;
+    if (!tocByPath.has(entry.relPath)) tocByPath.set(entry.relPath, []);
+    tocByPath.get(entry.relPath).push(entry);
+  }
   for(const rel of spine){
-    const chapter=await richParser.parseChapter({rel,chapterNumber:chapters.length+1});
-    if(chapter&&(chapter.paragraphs.length||chapter.images.length))chapters.push(chapter);
+    const parsed=await richParser.parseChapters({rel,toc:tocByPath.get(rel)||[],chapterNumber:chapters.length+1});
+    for(const chapter of parsed){
+      if(chapter&&(chapter.paragraphs.length||chapter.images.length))chapters.push(chapter);
+    }
   }
   if(!chapters.length)throw new Error('EPUB 没有可读取的正文或图片。');
   return {title:safeText(title),author:safeText(author),chapters,format:'EPUB',contentVersion:3,media:imageReader.media};

@@ -7,21 +7,22 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 
 function mediaType(href) {
   if (/\.xhtml$/i.test(href)) return 'application/xhtml+xml';
+  if (/\.ncx$/i.test(href)) return 'application/x-dtbncx+xml';
   if (/\.svg$/i.test(href)) return 'image/svg+xml';
   if (/\.png$/i.test(href)) return 'image/png';
   return 'application/octet-stream';
 }
 
-async function epub({files, spine, title = '富内容测试', author = '测试作者'}) {
+async function epub({files, spine, title = '富内容测试', author = '测试作者', toc = null, nav = null}) {
   const zip = new JSZip();
   zip.file('META-INF/container.xml', '<container><rootfiles><rootfile full-path="OPS/book.opf"/></rootfiles></container>');
   const hrefs = Object.keys(files);
   const manifest = hrefs.map((href, index) =>
-    `<item id="f${index}" href="${href}" media-type="${mediaType(href)}"/>`).join('');
+    `<item id="f${index}" href="${href}" media-type="${mediaType(href)}"${href === nav ? ' properties="nav"' : ''}/>`).join('');
   const itemrefs = spine.map(href => `<itemref idref="f${hrefs.indexOf(href)}"/>`).join('');
   zip.file('OPS/book.opf',
     `<package><metadata><title>${title}</title><creator>${author}</creator></metadata>` +
-    `<manifest>${manifest}</manifest><spine>${itemrefs}</spine></package>`);
+    `<manifest>${manifest}</manifest><spine${toc ? ` toc="f${hrefs.indexOf(toc)}"` : ''}>${itemrefs}</spine></package>`);
   for (const [href, content] of Object.entries(files)) {
     zip.file('OPS/' + href, Buffer.isBuffer(content) ? content : String(content));
   }
@@ -333,4 +334,79 @@ test('EPUB keeps picture-only chapters anchor-only and removes only the title he
   const second = book.chapters[2];
   assert.equal(second.title, '备用标题');
   assert.deepEqual(second.paragraphs, ['无标题正文']);
+});
+
+const ncx = points => `<?xml version="1.0" encoding="utf-8"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/"><navMap>${points}</navMap></ncx>`;
+
+test('EPUB2 NCX splits one spine document into chapters and keeps notes and images with their segment', async () => {
+  const book = await parseEPUB(await epub({
+    spine: ['Text/book.xhtml'],
+    toc: 'toc.ncx',
+    files: {
+      'Text/book.xhtml': `<html><head><title>目录测试</title></head><body><div id="root">
+        <div class="page"><p class="title">前言</p><p>前言内容</p></div>
+        <div class="page"><p id="a">第一章 准备</p><p>第一章正文</p><img src="../Images/pixel.png" alt="插图"/></div>
+        <div class="page"><p>第一节引言</p><p id="b">第一节 细节</p><p>细节正文</p></div>
+        <div class="page"><p id="c">第二章 继续</p><p>脚注段落<a epub:type="noteref" href="#fn1">1</a></p>
+          <aside epub:type="footnote" id="fn1"><p>脚注文本</p></aside></div>
+      </div></body></html>`,
+      'toc.ncx': ncx(
+        '<navPoint><navLabel><text>第一章 准备</text></navLabel><content src="Text/book.xhtml#a"/>' +
+        '<navPoint><navLabel><text>第一节 细节</text></navLabel><content src="Text/book.xhtml#b"/></navPoint></navPoint>' +
+        '<navPoint><navLabel><text>第二章 继续</text></navLabel><content src="Text/book.xhtml#c"/></navPoint>'),
+      'Images/pixel.png': PNG
+    }
+  }), 'toc-ncx.epub');
+
+  assert.deepEqual(book.chapters.map(chapter => chapter.title),
+    ['前言', '第一章 准备', '第一节 细节', '第二章 继续']);
+  assert.equal(book.chapters.length, 4);
+  assert.ok(book.chapters[1].paragraphs.includes('第一节引言'));
+  assert.deepEqual(book.chapters[2].paragraphs, ['第一节 细节', '细节正文']);
+  assert.equal(book.chapters[1].images.length, 1);
+  assert.equal(book.chapters[1].images[0].items[0].alt, '插图');
+  for (const chapter of book.chapters.slice(0, 3)) assert.equal(chapter.notes, undefined);
+  assert.equal(book.chapters[3].notes.length, 1);
+  assert.match(book.chapters[3].notes[0].html, /脚注文本/);
+  assert.ok(!book.chapters[3].paragraphs.some(text => text.includes('脚注文本')));
+  assert.equal(new Set(book.chapters.map(chapter => chapter.epubPath)).size, 4);
+});
+
+test('EPUB3 nav splits a spine document and uses its labels as chapter titles', async () => {
+  const book = await parseEPUB(await epub({
+    spine: ['Text/book.xhtml'],
+    nav: 'Text/nav.xhtml',
+    files: {
+      'Text/book.xhtml': `<html><head><title>导航测试</title></head><body><div id="root">
+        <div class="page"><p id="a">第一章</p><p>正文一</p></div>
+        <div class="page"><p id="b">第二章</p><p>正文二</p></div>
+      </div></body></html>`,
+      'Text/nav.xhtml': `<html><body><nav epub:type="toc"><ol>
+        <li><a href="book.xhtml#a">第一章</a></li>
+        <li><a href="book.xhtml#b">第二章</a></li>
+      </ol></nav></body></html>`
+    }
+  }), 'toc-nav.epub');
+
+  assert.equal(book.chapters.length, 2);
+  assert.deepEqual(book.chapters.map(chapter => chapter.title), ['第一章', '第二章']);
+  assert.deepEqual(book.chapters[0].paragraphs, ['第一章', '正文一']);
+  assert.deepEqual(book.chapters[1].paragraphs, ['第二章', '正文二']);
+});
+
+test('a single TOC entry supplies the whole-document chapter title and removes a duplicate heading', async () => {
+  const book = await parseEPUB(await epub({
+    spine: ['Text/book.xhtml'],
+    toc: 'toc.ncx',
+    files: {
+      'Text/book.xhtml': '<html><head><title>回退标题</title></head><body>' +
+        '<h1 id="a">第1章 唯一</h1><p>正文</p></body></html>',
+      'toc.ncx': ncx('<navPoint><navLabel><text>第1章 唯一</text></navLabel>' +
+        '<content src="Text/book.xhtml#a"/></navPoint>')
+    }
+  }), 'toc-single.epub');
+
+  assert.equal(book.chapters.length, 1);
+  assert.equal(book.chapters[0].title, '第1章 唯一');
+  assert.deepEqual(book.chapters[0].paragraphs, ['正文']);
 });

@@ -312,6 +312,146 @@ function sanitizeHtml(html, options = {}) {
   return (root.html() || '').trim();
 }
 
+function isDescendant(node, ancestor) {
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (parent === ancestor) return true;
+  }
+  return false;
+}
+
+function directChildOf(node, ancestor) {
+  let child = node;
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (parent === ancestor) return child;
+    child = parent;
+  }
+  return null;
+}
+
+function commonAncestor(nodes) {
+  for (let candidate = nodes[0].parent; candidate; candidate = candidate.parent) {
+    if (nodes.every(node => node === candidate || isDescendant(node, candidate))) return candidate;
+  }
+  return null;
+}
+
+function cloneContainer($, container, from, to) {
+  const source = $(container).contents().toArray();
+  if (to <= from || from < 0 || to > source.length) return null;
+  const clone = $(container).clone();
+  clone.removeAttr('id');
+  clone.empty();
+  for (let index = from; index < to; index++) clone.append($(source[index]).clone());
+  return clone[0];
+}
+
+// Split a body clone at the elements referenced by the EPUB table of contents.
+// TOC anchors are usually direct children of a page container; when an anchor
+// is nested deeper, the closest direct child becomes the boundary.
+function splitBody($, body, entries) {
+  const ids = new Map();
+  $(body).find('[id]').each((_, el) => {
+    const id = $(el).attr('id');
+    if (id && !ids.has(id)) ids.set(id, el);
+  });
+  const order = new Map();
+  $(body).find('*').toArray().forEach((el, index) => order.set(el, index));
+
+  const targets = [];
+  for (const entry of entries) {
+    if (!entry.fragment) continue;
+    const target = ids.get(entry.fragment);
+    if (!target || !isDescendant(target, body)) continue;
+    targets.push({entry, target, order: order.get(target) ?? Number.MAX_SAFE_INTEGER});
+  }
+  targets.sort((a, b) => a.order - b.order);
+  const unique = [];
+  for (const item of targets) {
+    if (!unique.some(existing => existing.target === item.target)) unique.push(item);
+  }
+  if (unique.length < 2) return null;
+
+  const root = commonAncestor(unique.map(item => item.target));
+  if (!root) return null;
+  const groups = new Map();
+  let startEntry = null;
+  for (const item of unique) {
+    if (item.target === root) {
+      startEntry = startEntry || item.entry;
+      continue;
+    }
+    const top = directChildOf(item.target, root);
+    if (!top) continue;
+    const topTarget = item.target === top;
+    let innerIndex = -1;
+    if (!topTarget) {
+      const inner = directChildOf(item.target, top);
+      if (!inner) continue;
+      innerIndex = $(top).contents().toArray().indexOf(inner);
+      if (innerIndex < 0) continue;
+    }
+    let boundaries = groups.get(top);
+    if (!boundaries) { boundaries = []; groups.set(top, boundaries); }
+    if (!boundaries.some(existing => existing.topTarget === topTarget && existing.innerIndex === innerIndex)) {
+      boundaries.push({entry: item.entry, innerIndex, topTarget});
+    }
+  }
+
+  const segments = [];
+  let current = null;
+  const ensure = () => {
+    if (!current) current = {title: null, fragment: '', nodes: []};
+    return current;
+  };
+  const flush = () => {
+    if (current && current.nodes.length) segments.push(current);
+    current = null;
+  };
+  const start = entry => {
+    flush();
+    current = {title: entry?.label || '', fragment: entry?.fragment || '', nodes: []};
+  };
+
+  if (startEntry) start(startEntry);
+  for (const top of $(root).children().toArray()) {
+    const boundaries = groups.get(top);
+    if (!boundaries || !boundaries.length) {
+      ensure().nodes.push(cloneContainer($, top, 0, $(top).contents().length));
+      continue;
+    }
+    const whole = boundaries.find(boundary => boundary.topTarget);
+    if (whole) {
+      start(whole.entry);
+      ensure().nodes.push(cloneContainer($, top, 0, $(top).contents().length));
+      continue;
+    }
+    const ordered = boundaries.slice().sort((a, b) => a.innerIndex - b.innerIndex);
+    const contents = $(top).contents().toArray();
+    if (ordered[0].innerIndex > 0) {
+      const range = cloneContainer($, top, 0, ordered[0].innerIndex);
+      if (range) ensure().nodes.push(range);
+    }
+    for (let index = 0; index < ordered.length; index++) {
+      const boundary = ordered[index];
+      const end = index + 1 < ordered.length ? ordered[index + 1].innerIndex : contents.length;
+      start(boundary.entry);
+      const range = cloneContainer($, top, boundary.innerIndex, end);
+      if (range) current.nodes.push(range);
+    }
+  }
+  flush();
+  return segments.length >= 2 ? segments : null;
+}
+
+function titleOf($, root) {
+  for (const selector of ['[class*="title"],[class*="Title"]', 'h1,h2,h3,h4,h5,h6', '[id*="toc"],[id*="TOC"]']) {
+    const element = $(root).find(selector).toArray().find(el => norm($(el).text()));
+    if (element) return norm($(element).text()).slice(0, 120);
+  }
+  const first = $(root).find('p,div').toArray().find(el => norm($(el).text()));
+  return first ? norm($(first).text()).slice(0, 120) : '';
+}
+
 function createRichParser({zip, imageReader}) {
   const docs = new Map();
   // premarkNotes and processNotes inspect the same anchors; resolve each once.
@@ -488,22 +628,8 @@ function createRichParser({zip, imageReader}) {
     return $(el).find('p,div,section,article,table,figure,ul,ol,dl,blockquote,pre,h1,h2,h3,h4,h5,h6').length ? 'block' : 'inline';
   }
 
-  async function parseChapter({html, rel, chapterNumber = 1}) {
-    const doc = await getDocument(rel, html);
-    if (!doc) return null;
+  async function buildChapter({doc, body, rel, title, chapterNumber, notes, epubPath}) {
     const $ = doc.$;
-
-    const headings = $('body h1,body h2,body h3');
-    const headingEl = headings.first();
-    const heading = headingEl.length ? norm(headingEl.text()) : '';
-    if (headingEl.length) headingEl.remove();
-    const title = heading || norm($('title').first().text()) || '第' + chapterNumber + '节';
-
-    const notes = await processNotes(doc, rel);
-
-    const bodyClone = $('body').clone();
-    bodyClone.find('[data-cotex-note-hidden="1"]').remove();
-    const body = bodyClone[0];
     const scan = await scanImages({$, el: body}, path.posix.dirname(rel));
     const pictures = scan.pictures;
     const marker = scan.marker;
@@ -617,13 +743,71 @@ function createRichParser({zip, imageReader}) {
 
     await walk(body);
 
-    const chapter = {title, paragraphs, images, epubPath: rel};
+    const chapter = {title: title || '第' + chapterNumber + '节', paragraphs, images, epubPath};
     if (Object.keys(rich).length) chapter.rich = rich;
-    if (notes.length) chapter.notes = notes;
+    if (notes.length) {
+      const used = new Set();
+      for (const block of Object.values(rich)) {
+        for (const match of block.html.matchAll(/data-note-id="([^"]+)"/g)) used.add(match[1]);
+      }
+      const chapterNotes = notes.filter(note => used.has(note.id));
+      if (chapterNotes.length) chapter.notes = chapterNotes;
+    }
     return chapter;
   }
 
-  return {parseChapter, premarkNotes};
+  async function wholeChapter({doc, body, rel, toc, chapterNumber, notes, docTitle}) {
+    const $ = doc.$;
+    const headingEl = $(body).find('h1,h2,h3').first();
+    const heading = headingEl.length ? norm(headingEl.text()) : '';
+    let title;
+    if (toc?.label) {
+      title = toc.label;
+      if (heading && norm(heading) === norm(title)) headingEl.remove();
+    } else {
+      title = heading || docTitle || '第' + chapterNumber + '节';
+      if (headingEl.length) headingEl.remove();
+    }
+    return buildChapter({doc, body, rel, title, chapterNumber, notes, epubPath: rel});
+  }
+
+  async function parseChapters({html, rel, toc = [], chapterNumber = 1}) {
+    const doc = await getDocument(rel, html);
+    if (!doc) return [];
+    const $ = doc.$;
+    const notes = await processNotes(doc, rel);
+    const body = $('body').clone();
+    body.find('[data-cotex-note-hidden="1"]').remove();
+    const docTitle = norm($('title').first().text());
+    const entries = (Array.isArray(toc) ? toc : []).filter(entry => entry && (!entry.relPath || entry.relPath === rel));
+    const segments = entries.length >= 2 ? splitBody($, body[0], entries) : null;
+    if (!segments || segments.length < 2) {
+      return [await wholeChapter({doc, body, rel, toc: entries[0], chapterNumber, notes, docTitle})];
+    }
+
+    const chapters = [];
+    for (const [index, segment] of segments.entries()) {
+      const root = $('<div></div>')[0];
+      for (const node of segment.nodes) $(root).append(node);
+      const title = segment.title || titleOf($, root) || docTitle || '第' + (chapterNumber + index) + '节';
+      const suffix = segment.fragment || (segment.title ? 'start' : 'front');
+      const chapter = await buildChapter({
+        doc, body: root, rel, title,
+        chapterNumber: chapterNumber + index,
+        notes,
+        epubPath: rel + '#' + suffix
+      });
+      if (chapter.paragraphs.length || chapter.images.length) chapters.push(chapter);
+    }
+    return chapters;
+  }
+
+  async function parseChapter(args) {
+    const chapters = await parseChapters({...args, toc: []});
+    return chapters[0] || null;
+  }
+
+  return {parseChapter, parseChapters, premarkNotes};
 }
 
 module.exports = {createRichParser, RICH_TYPES, blockHasImages};
