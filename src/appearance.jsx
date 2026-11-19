@@ -33,11 +33,17 @@ function LimitedInput({value,max,onChange,...props}) {
  return <input {...props} value={draft} onFocus={()=>{focused.current=true;}} onChange={e=>{setDraft(e.target.value);if(!composing.current)commit(e.target.value);}} onCompositionStart={()=>{composing.current=true;}} onCompositionEnd={e=>{composing.current=false;commit(e.target.value);}} onBlur={()=>{focused.current=false;if(!draft.trim()){setDraft(value);}else commit(draft);}}/>;
 }
 
-export function ImageGallery({group,chapter,media,collapsed,onToggle,onPreview}) {
+export function ImageGallery({group,chapter,media,collapsed,onToggle}) {
  const [failed,setFailed]=useState({});
+ const [active,setActive]=useState(null);
+ const previewRef=useRef(null);
+ useEffect(()=>{if(collapsed)setActive(null);},[collapsed]);
+ useEffect(()=>{if(active!=null)previewRef.current?.scrollIntoView({block:'start',behavior:'smooth'});},[active]);
+ const activeItem=active!=null&&!failed[active]&&media?.[group.items[active]?.asset]?group.items[active]:null;
  return <div className={'epub-images '+(collapsed?'images-collapsed':'')} data-chapter={chapter} data-paragraph={group.paragraph} data-group={chapter+':'+group.paragraph}>
   <ImageToggle collapsed={collapsed} count={group.items.length} onToggle={onToggle}/>
-  {!collapsed&&<div className="image-thumbnails">{group.items.map((item,i)=>item.missing||failed[i]||!media?.[item.asset]?<div className="image-missing" key={i}><ImageOff size={24}/><span>{item.alt||'图片暂不可用'}</span><small>{item.missing?'原文件缺少可用图片资源':'无法读取此图片'}</small></div>:<button className="image-thumbnail" type="button" key={i} aria-label={'查看图片 '+(i+1)+(item.alt?'：'+item.alt:'')} onClick={()=>onPreview({src:media[item.asset],alt:item.alt})}><img src={media[item.asset]} alt={item.alt||'EPUB 插图 '+(i+1)} loading="lazy" onError={()=>setFailed(s=>({...s,[i]:true}))}/></button>)}</div>}
+  {!collapsed&&<div className="image-thumbnails">{group.items.map((item,i)=>item.missing||failed[i]||!media?.[item.asset]?<div className="image-missing" key={i}><ImageOff size={24}/><span>{item.alt||'图片暂不可用'}</span><small>{item.missing?'原文件缺少可用图片资源':'无法读取此图片'}</small></div>:<button className={'image-thumbnail'+(active===i?' active':'')} type="button" key={i} aria-expanded={active===i} aria-label={'查看图片 '+(i+1)+(item.alt?'：'+item.alt:'')} onClick={()=>setActive(active===i?null:i)}><img src={media[item.asset]} alt={item.alt||'EPUB 插图 '+(i+1)} loading="lazy" onError={()=>setFailed(s=>({...s,[i]:true}))}/></button>)}</div>}
+  {!collapsed&&activeItem&&<figure className="image-inline-preview" ref={previewRef}><figcaption><span>{activeItem.alt||'大图'}</span><button type="button" onClick={()=>setActive(null)}>收起大图</button></figcaption><img src={media[activeItem.asset]} alt={activeItem.alt||'EPUB 插图'} onError={()=>setFailed(s=>({...s,[active]:true}))}/></figure>}
  </div>;
 }
 

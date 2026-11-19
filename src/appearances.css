@@ -27,14 +27,13 @@
 .image-missing{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;gap:5px;font-size:11px;padding:8px}
 .image-missing span{max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .image-missing small{font-size:9px}
-.modal-backdrop.image-backdrop{padding:0;background:#0b0b0bd9;backdrop-filter:blur(6px)}
-.modal.image-modal{width:100%;height:100%;max-width:100%;max-height:100%;border:0;border-radius:0;background:transparent;box-shadow:none}
-.image-viewer{position:relative;display:flex;flex-direction:column;gap:8px;width:100%;height:100%;min-height:0;padding:10px 14px 14px}
-.image-viewer-stage{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.image-viewer-stage img{width:100%;height:100%;object-fit:contain;border-radius:6px}
-.image-viewer p{flex:none;margin:0;color:#e8e8e8;text-align:center;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow:hidden;max-height:3.2em}
-.image-viewer-close{position:absolute;top:8px;right:12px;z-index:2;color:#fff;background:#00000066;border:1px solid #ffffff33;border-radius:50%;width:34px;height:34px}
-.image-viewer-close:hover{background:#00000099}
+.image-thumbnail.active{border-color:#a99bb3;box-shadow:0 0 0 2px #b9a9c733}
+.image-inline-preview{margin:14px 0 2px;text-align:center}
+.image-inline-preview img{display:block;width:auto;height:auto;max-width:100%;max-height:min(75vh,900px);margin:0 auto;border:1px solid var(--line);border-radius:13px;background:var(--side)}
+.image-inline-preview figcaption{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 8px;color:var(--muted);font-size:12px;line-height:1.6}
+.image-inline-preview figcaption span{max-width:72%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.image-inline-preview figcaption button{color:var(--blue);font-size:12px;padding:2px 4px;border-radius:4px}
+.image-inline-preview figcaption button:hover{text-decoration:underline}
 .progress-value[stroke-dashoffset="100"]{opacity:0}
 
 /* WorkBuddy reference: a single flat sidebar, task list, profile footer and a

@@ -28,9 +28,7 @@ function replaceImages(root,media){
    continue;
   }
   image.setAttribute('src',source);
-  image.setAttribute('tabindex','0');
-  image.setAttribute('role','button');
-  if(!image.getAttribute('aria-label'))image.setAttribute('aria-label','查看图片'+(image.getAttribute('alt')?'：'+image.getAttribute('alt'):'')); }
+ }
 }
 
 function normalizeLinks(root){
@@ -81,33 +79,27 @@ function noteTarget(event){
  return target&&event.currentTarget.contains(target)&&target.getAttribute('data-note-id')?target:null;
 }
 
-function imageTarget(event){
- const target=event.target instanceof Element?event.target.closest('img[data-asset]'):null;
- return target&&event.currentTarget.contains(target)?target:null;
-}
-
-function activateRichTarget(event,onOpenNote,onPreviewImage){
+function activateNoteRef(event,onOpenNote){
  const note=noteTarget(event);
- if(note){onOpenNote?.(note.getAttribute('data-note-id'));return true;}
- const image=imageTarget(event);
- if(image){onPreviewImage?.({src:image.getAttribute('src'),alt:image.getAttribute('alt')||''});return true;}
- return false;
+ if(!note)return false;
+ onOpenNote?.(note.getAttribute('data-note-id'));
+ return true;
 }
 
-function clickRich(event,onOpenNote,onPreviewImage){
- if(!activateRichTarget(event,onOpenNote,onPreviewImage))return;
+function clickRich(event,onOpenNote){
+ if(!activateNoteRef(event,onOpenNote))return;
  event.preventDefault();
  event.stopPropagation();
 }
 
-function keyRich(event,onOpenNote,onPreviewImage){
+function keyRich(event,onOpenNote){
  if(event.key!=='Enter'&&event.key!==' '&&event.key!=='Spacebar')return;
- if(!activateRichTarget(event,onOpenNote,onPreviewImage))return;
+ if(!activateNoteRef(event,onOpenNote))return;
  event.preventDefault();
  event.stopPropagation();
 }
 
-export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,onOpenNote,onPreviewImage,collapsed,onToggleImages}){
+export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,onOpenNote,collapsed,onToggleImages}){
  const content=useRichHtml(html,media,simplified,convert);
  const kind=type||'html';
  const imageCount=useMemo(()=>(content.match(/<img\b/g)||[]).length+(content.match(/data-missing-image="1"/g)||[]).length,[content]);
@@ -116,8 +108,8 @@ export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,
   'data-chapter':chapter,
   'data-paragraph':paragraph,
   className,
-  onClick:event=>clickRich(event,onOpenNote,onPreviewImage),
-  onKeyDown:event=>keyRich(event,onOpenNote,onPreviewImage),
+  onClick:event=>clickRich(event,onOpenNote),
+  onKeyDown:event=>keyRich(event,onOpenNote),
   dangerouslySetInnerHTML:{__html:content}
  };
  const element=kind==='text'?<p {...props}/>:<div {...props}/>;

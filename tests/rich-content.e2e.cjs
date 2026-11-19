@@ -114,21 +114,23 @@ async function launch(data) {
     await expect(imageToggle).toHaveAttribute('aria-expanded', 'true');
     await expect(thumbnail).toHaveCount(1);
 
-    const preview = page.getByRole('dialog', {name: '查看图片'});
+    const inline = page.locator('.epub-images .image-inline-preview');
     await thumbnail.click();
-    await expect(preview).toBeVisible();
-    await expect(preview.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml;base64,/);
-    const stage = await preview.locator('.image-viewer-stage').boundingBox();
-    const shown = await preview.locator('img').boundingBox();
-    expect(shown.width).toBeGreaterThan(stage.width * 0.9);
-    expect(shown.height).toBeGreaterThan(stage.height * 0.9);
-    await page.keyboard.press('Escape');
-    await expect(preview).toHaveCount(0);
+    await expect(inline).toHaveCount(1);
+    await expect(inline.locator('img')).toHaveAttribute('src', /^data:image\/svg\+xml;base64,/);
+    await expect(page.getByRole('dialog', {name: '查看图片'})).toHaveCount(0);
+    const thumbBox = await thumbnail.boundingBox();
+    const inlineBox = await inline.locator('img').boundingBox();
+    expect(inlineBox.width).toBeGreaterThan(thumbBox.width * 3);
+    await expect(thumbnail).toHaveAttribute('aria-expanded', 'true');
     await thumbnail.focus();
     await page.keyboard.press('Enter');
-    await expect(preview).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(preview).toHaveCount(0);
+    await expect(inline).toHaveCount(0);
+    await expect(thumbnail).toHaveAttribute('aria-expanded', 'false');
+    await page.keyboard.press('Enter');
+    await expect(inline).toHaveCount(1);
+    await page.getByRole('button', {name: '收起大图'}).click();
+    await expect(inline).toHaveCount(0);
     await imageToggle.click();
     await expect(thumbnail).toHaveCount(0);
 
@@ -187,7 +189,7 @@ async function launch(data) {
     await expect(page.locator('.rich-note-ref')).toHaveCount(1);
 
     expect(errors).toEqual([]);
-    console.log('PASS: rich EPUB E2E — table, MathML, default-open image gallery with fold/preview, full-window viewer, heading, list, quote, click/keyboard footnote modal, no duplicate inline image, no page overflow, persisted after restart.');
+    console.log('PASS: rich EPUB E2E — table, MathML, default-open image gallery with inline expand/collapse, full-size in-flow image, heading, list, quote, click/keyboard footnote modal, no inline image duplicate, no page overflow, persisted after restart.');
     console.log('Screenshots: ' + directory);
   } finally {
     await app.close().catch(() => {});

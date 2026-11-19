@@ -29,9 +29,14 @@ async function ring(p,buddy){const ring=p.getByRole('progressbar',{name:'小说�
   await screenshot(p,'codex-images');await ring(p,false);
   await group.getByRole('button',{name:'已查看图片 · 2 张'}).click();await expect(group.locator('.image-thumbnail')).toHaveCount(0);
   await p.keyboard.press('Space');await expect(p.locator('.boss-content')).toBeVisible();await p.keyboard.press('Space');await expect(group).toHaveClass(/images-collapsed/);
-  await group.getByRole('button',{name:'已查看图片 · 2 张'}).click();await group.getByRole('button',{name:'查看图片 1：山谷的白昼'}).click();
-  await expect(p.getByRole('dialog',{name:'查看图片'}).locator('img')).toHaveAttribute('alt','山谷的白昼');
-  await p.keyboard.press('Space');await expect(p.getByRole('dialog',{name:'查看图片'})).toBeVisible();await screenshot(p,'image-preview');await p.keyboard.press('Escape');
+  await group.getByRole('button',{name:'已查看图片 · 2 张'}).click();const thumb=group.getByRole('button',{name:'查看图片 1：山谷的白昼'});await thumb.click();
+  const inline=group.locator('.image-inline-preview');
+  await expect(inline.locator('img')).toHaveAttribute('alt','山谷的白昼');
+  await expect(p.getByRole('dialog',{name:'查看图片'})).toHaveCount(0);
+  await screenshot(p,'image-inline');
+  await group.getByRole('button',{name:'收起大图'}).click();await expect(inline).toHaveCount(0);
+  await thumb.focus();await p.keyboard.press('Enter');await expect(inline).toHaveCount(1);
+  await group.getByRole('button',{name:'收起大图'}).click();await expect(inline).toHaveCount(0);
   await p.getByRole('button',{name:'自定义头像',exact:true}).click();await p.getByLabel('头像文字',{exact:true}).fill('ABC');await p.getByLabel('头像颜色',{exact:true}).fill('#184a63');await p.keyboard.press('Escape');
   await expect(p.locator('.rail .profile-avatar')).toHaveText('AB');
   await skin(p,'workbuddy');await expect(p.locator('.chapter').first()).toHaveAttribute('id','chapter-1');await expect(p.locator('.rail')).toHaveCount(0);await ring(p,true);
@@ -61,6 +66,6 @@ async function ring(p,buddy){const ring=p.getByRole('progressbar',{name:'小说�
   await expect(p.locator('.app')).toHaveClass(/appearance-workbuddy/);await p.keyboard.press('Control+k');await p.getByRole('textbox',{name:'搜索书名或作者'}).fill('图文阅读测试');await p.locator('.library-book').click();await expect(p.locator('#chapter-1 .epub-images')).toHaveClass(/images-collapsed/);
   await p.locator('#chapter-1 .image-toggle').click();await expect(p.locator('#chapter-1 .image-thumbnail')).toHaveCount(2);await expect.poll(()=>p.locator('#chapter-1 .image-thumbnail img').first().evaluate(i=>i.naturalWidth)).toBe(480);
   await screenshot(p,'restored-workbuddy');expect(errors).toEqual([]);
-  console.log('PASS: both skins, ring directions, EPUB picture order/preview/collapse, profiles/upload, Space/menu regressions, narrow dark layout, restart, backup and restore.');console.log('Screenshots: '+directory);
+  console.log('PASS: both skins, ring directions, EPUB picture order/inline expand/collapse, profiles/upload, Space/menu regressions, narrow dark layout, restart, backup and restore.');console.log('Screenshots: '+directory);
  }finally{await a.close().catch(()=>{});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
