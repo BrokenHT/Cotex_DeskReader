@@ -5,6 +5,12 @@
 .rich-note{max-width:100%;overflow-wrap:anywhere;word-break:normal;color:var(--text)}
 .rich-block{min-width:0;margin:0 0 18px}
 .rich-text{min-width:0}
+.rich-media-block{margin:0 0 18px}
+.rich-media-block>.rich-text,
+.rich-media-block>.rich-block{margin-bottom:0}
+.rich-media-block .image-toggle{margin-bottom:.35em}
+.rich-media-block .images-collapsed img,
+.rich-media-block .images-collapsed [data-missing-image]{display:none}
 .prose .rich-text,
 .prose .rich-block p{white-space:normal}
 .rich-block>*:first-child,
@@ -59,6 +65,10 @@
 .rich-text img,
 .rich-block img,
 .rich-note img{max-width:100%;height:auto}
+.rich-text img[data-asset],
+.rich-block img[data-asset]{cursor:zoom-in}
+.rich-text img[data-asset]:focus-visible,
+.rich-block img[data-asset]:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
 .rich-text img{vertical-align:middle}
 .rich-figure img,
 .rich-note figure img{display:block;margin:.25em auto}

@@ -48,6 +48,19 @@ test('rich and notes survive Store.add/get/save and restart',()=>{
   assert.deepEqual(restarted.chapters[0].notes,notes);
 });
 
+test('collapsed image state accepts rich blocks that contain images',()=>{
+  const root=fs.mkdtempSync(path.join(os.tmpdir(),'cotex-rich-'));
+  const store=new Store(root);
+  const book=fixture();
+  book.chapters[0].rich={0:{type:'figure',html:'<figure><img data-asset="0123456789abcdef01234567" alt="图示"><figcaption>图注</figcaption></figure>'}};
+  book.media={'0123456789abcdef01234567':'data:image/png;base64,AAAA'};
+  store.add(book);
+  store.patch(BOOK_ID,{collapsedImages:['0:0','0:1','bad']});
+  assert.deepEqual(store.get(BOOK_ID).collapsedImages,['0:0']);
+  store.patch(BOOK_ID,{expandedImages:['0:0','0:1','bad']});
+  assert.deepEqual(store.get(BOOK_ID).expandedImages,['0:0']);
+});
+
 test('validateBackup accepts rich/notes and legacy chapters without them',()=>{
   assert.equal(validateBackup(backup()).books[0].chapters[0].notes[0].id,'note-1');
   const legacy=fixture();

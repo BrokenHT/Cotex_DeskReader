@@ -1,5 +1,6 @@
 import React,{useMemo} from 'react';
 import DOMPurify from 'dompurify';
+import {ChevronDown,ChevronRight,Images} from 'lucide-react';
 
 const forbiddenTags=['script','style','iframe','object','embed','link','meta','form','input','button','select','textarea','audio','video','canvas','svg'];
 const forbiddenAttributes=new Set(['style','srcset','formaction','background','poster','xlink:href']);
@@ -33,6 +34,9 @@ function replaceImages(root,media){
    continue;
   }
   image.setAttribute('src',source);
+  image.setAttribute('tabindex','0');
+  image.setAttribute('role','button');
+  if(!image.getAttribute('aria-label'))image.setAttribute('aria-label','查看图片'+(image.getAttribute('alt')?'：'+image.getAttribute('alt'):''));
  }
 }
 
@@ -86,34 +90,51 @@ function noteTarget(event){
  return target&&event.currentTarget.contains(target)&&target.getAttribute('data-note-id')?target:null;
 }
 
-function openNoteRef(event,onOpenNote){
- const target=noteTarget(event);
- if(!target)return;
- event.preventDefault();
- event.stopPropagation();
- onOpenNote?.(target.getAttribute('data-note-id'));
+function imageTarget(event){
+ const target=event.target instanceof Element?event.target.closest('img[data-asset]'):null;
+ return target&&event.currentTarget.contains(target)?target:null;
 }
 
-function keyNoteRef(event,onOpenNote){
+function activateRichTarget(event,onOpenNote,onPreviewImage){
+ const note=noteTarget(event);
+ if(note){onOpenNote?.(note.getAttribute('data-note-id'));return true;}
+ const image=imageTarget(event);
+ if(image){onPreviewImage?.({src:image.getAttribute('src'),alt:image.getAttribute('alt')||''});return true;}
+ return false;
+}
+
+function clickRich(event,onOpenNote,onPreviewImage){
+ if(!activateRichTarget(event,onOpenNote,onPreviewImage))return;
+ event.preventDefault();
+ event.stopPropagation();
+}
+
+function keyRich(event,onOpenNote,onPreviewImage){
  if(event.key!=='Enter'&&event.key!==' '&&event.key!=='Spacebar')return;
- const target=noteTarget(event);
- if(!target)return;
+ if(!activateRichTarget(event,onOpenNote,onPreviewImage))return;
  event.preventDefault();
  event.stopPropagation();
- onOpenNote?.(target.getAttribute('data-note-id'));
 }
 
-export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,onOpenNote}){
+export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,onOpenNote,onPreviewImage,collapsed,onToggleImages}){
  const content=useRichHtml(html,media,simplified,convert);
  const kind=type||'html';
+ const imageCount=(content.match(/<img\b/g)||[]).length+(content.match(/data-missing-image="1"/g)||[]).length;
+ const className=(kind==='text'?'rich-text':'rich-block rich-'+kind)+(collapsed?' images-collapsed':'');
  const props={
   'data-chapter':chapter,
   'data-paragraph':paragraph,
-  onClick:event=>openNoteRef(event,onOpenNote),
-  onKeyDown:event=>keyNoteRef(event,onOpenNote),
+  className,
+  onClick:event=>clickRich(event,onOpenNote,onPreviewImage),
+  onKeyDown:event=>keyRich(event,onOpenNote,onPreviewImage),
   dangerouslySetInnerHTML:{__html:content}
  };
- return kind==='text'?<p className="rich-text" {...props}/>:<div className={'rich-block rich-'+kind} {...props}/>;
+ const element=kind==='text'?<p {...props}/>:<div {...props}/>;
+ if(!imageCount)return element;
+ return <div className="rich-media-block" data-group={chapter+':'+paragraph}>
+  <button className="image-toggle" type="button" aria-expanded={!collapsed} onClick={onToggleImages}><Images size={17}/><span>已查看图片{imageCount>1?' · '+imageCount+' 张':''}</span>{collapsed?<ChevronRight size={15}/>:<ChevronDown size={15}/>}</button>
+  {element}
+ </div>;
 }
 
 export function RichNote({html,media,simplified,convert}){

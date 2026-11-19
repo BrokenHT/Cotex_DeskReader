@@ -20,6 +20,6 @@ function upgradeEPUB(previous,next) {
     const match=oldText?ps.findIndex(t=>t===oldText||oldText.startsWith(t)&&t.length>10):-1;
     return {...p,chapter,paragraph:match>=0?match:Math.max(0,Math.min(p.paragraph||0,Math.max(0,ps.length-1)))};
   };
-  return {...next,alias:previous.alias,createdAt:previous.createdAt,progress:position(previous.progress||{chapter:0,paragraph:0}),bookmarks:previous.bookmarks.map(position),collapsed:previous.collapsed.map(i=>indexes[i]).filter(i=>i!==undefined),collapsedImages:[]};
+  return {...next,alias:previous.alias,createdAt:previous.createdAt,progress:position(previous.progress||{chapter:0,paragraph:0}),bookmarks:previous.bookmarks.map(position),collapsed:previous.collapsed.map(i=>indexes[i]).filter(i=>i!==undefined),collapsedImages:[],expandedImages:[]};
 }
 module.exports={upgradeEPUB};
