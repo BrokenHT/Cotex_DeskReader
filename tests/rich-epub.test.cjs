@@ -65,7 +65,7 @@ test('EPUB rich blocks preserve tables, MathML, figures, inline markup, lists, q
     }
   }), 'rich.epub');
 
-  assert.equal(book.contentVersion, 3);
+  assert.equal(book.contentVersion, 4);
   const chapter = chapterByTitle(book, '第一章 结构');
   const blocks = richBlocks(chapter);
   const types = new Set(blocks.map(block => block.type));
@@ -316,7 +316,7 @@ test('EPUB keeps picture-only chapters anchor-only and removes only the title he
     }
   }), 'headings.epub');
 
-  assert.equal(book.contentVersion, 3);
+  assert.equal(book.contentVersion, 4);
   assert.equal(book.chapters.length, 3);
   const cover = book.chapters[0];
   assert.equal(cover.title, '封面');

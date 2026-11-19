@@ -100,17 +100,17 @@ test('validateBackup rejects malformed notes and oversized HTML',()=>{
   },'备份内容过大');
 });
 
-test('EPUB v2 to v3 upgrade preserves state and adopts new rich content',()=>{
+test('EPUB v3 to v4 upgrade preserves state and adopts new chapters',()=>{
   const root=fs.mkdtempSync(path.join(os.tmpdir(),'cotex-upgrade-'));
   const store=new Store(root);
   const previous=fixture({
-    contentVersion:2,
+    contentVersion:3,
     chapters:[{id:'old',title:'第一章 旧题',paragraphs:['旧段落一','旧段落二']}]
   });
   store.add(previous);
   store.patch(BOOK_ID,{alias:'保留工作',progress:{chapter:0,paragraph:1},bookmarks:[{chapter:0,paragraph:1}],collapsed:[0]});
   const next=fixture({
-    contentVersion:3,
+    contentVersion:4,
     chapters:[
       {id:'cover',title:'封面',paragraphs:[]},
       {id:'new',title:'第一章 新题',paragraphs:['新增前言','旧段落一','旧段落二'],rich,notes}
@@ -118,7 +118,7 @@ test('EPUB v2 to v3 upgrade preserves state and adopts new rich content',()=>{
   });
   const upgraded=store.add(next);
   assert.equal(upgraded.alias,'保留工作');
-  assert.equal(upgraded.contentVersion,3);
+  assert.equal(upgraded.contentVersion,4);
   assert.equal(upgraded.progress.chapter,1);
   assert.equal(upgraded.progress.paragraph,2);
   assert.equal(upgraded.bookmarks[0].chapter,1);
