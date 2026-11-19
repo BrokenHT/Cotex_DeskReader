@@ -10,13 +10,15 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "start": "electron .",
-    "test": "node --test tests/core.test.cjs tests/cotex.test.cjs tests/sources.test.cjs tests/window.test.cjs tests/epub-images.test.cjs",
+    "test": "node --test tests/core.test.cjs tests/cotex.test.cjs tests/sources.test.cjs tests/window.test.cjs tests/epub-images.test.cjs tests/rich-epub.test.cjs tests/rich-store.test.cjs",
     "test:ui": "node tests/e2e.cjs",
+    "test:rich-ui": "node tests/rich-content.e2e.cjs",
     "dist": "npm run build && electron-builder --win portable nsis --x64",
     "test:work-summary": "node tests/work-summary.e2e.cjs"
   },
   "dependencies": {
     "cheerio": "^1.1.2",
+    "dompurify": "^3.4.18",
     "fast-xml-parser": "^5.3.6",
     "iconv-lite": "^0.7.2",
     "jszip": "^3.10.1",
