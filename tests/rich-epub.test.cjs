@@ -239,6 +239,25 @@ test('EPUB rich content sanitizes scripts, event handlers, styles, external URLs
   assert.equal(chapter.notes, undefined);
 });
 
+test('EPUB resolves notes whose group container uses plural EPUB semantics', async () => {
+  const book = await parseEPUB(await epub({
+    spine: ['Text/ch1.xhtml'],
+    files: {
+      'Text/ch1.xhtml': '<html><body><h1>复数注释</h1><p>正文' +
+        '<a epub:type="noteref" href="notes.xhtml#en1">1</a></p></body></html>',
+      'Text/notes.xhtml': '<html><body><section epub:type="endnotes">' +
+        '<aside id="en1"><p>组尾注文本</p></aside></section></body></html>'
+    }
+  }), 'plural-notes.epub');
+
+  assert.equal(book.chapters.length, 1);
+  const chapter = book.chapters[0];
+  assert.equal(chapter.notes.length, 1);
+  assert.match(chapter.notes[0].html, /组尾注文本/);
+  assert.ok(!chapter.paragraphs.some(text => text.includes('组尾注文本')));
+  assert.match(chapter.rich[0].html, /data-note-id="n1"/);
+});
+
 test('EPUB caches cross-file notes for reuse by later chapters', async () => {
   const book = await parseEPUB(await epub({
     spine: ['Text/ch1.xhtml', 'Text/ch2.xhtml', 'Text/notes.xhtml'],

@@ -5,23 +5,20 @@ const crypto = require('node:crypto');
 const cheerio = require('cheerio');
 const {resolveEntry} = require('./epub-images.cjs');
 
-const ALLOWED_TAGS = new Set([
-  'p','span','em','strong','i','b','u','s','sub','sup','small','br','hr',
-  'h1','h2','h3','h4','h5','h6',
-  'ul','ol','li','dl','dt','dd','blockquote','pre','code',
-  'table','caption','thead','tbody','tfoot','tr','th','td','colgroup','col',
-  'figure','figcaption','img',
+const MATH_TAGS = new Set([
   'math','mi','mn','mo','mtext','mrow','mfrac','msqrt','mroot','msup','msub',
   'msubsup','mover','munder','munderover','mtable','mtr','mtd','mspace',
   'semantics','annotation','mpadded','mphantom','menclose','mmultiscripts',
   'mprescripts','none','merror','mstyle'
 ]);
 
-const MATH_TAGS = new Set([
-  'math','mi','mn','mo','mtext','mrow','mfrac','msqrt','mroot','msup','msub',
-  'msubsup','mover','munder','munderover','mtable','mtr','mtd','mspace',
-  'semantics','annotation','mpadded','mphantom','menclose','mmultiscripts',
-  'mprescripts','none','merror','mstyle'
+const ALLOWED_TAGS = new Set([
+  'p','span','em','strong','i','b','u','s','sub','sup','small','br','hr',
+  'h1','h2','h3','h4','h5','h6',
+  'ul','ol','li','dl','dt','dd','blockquote','pre','code',
+  'table','caption','thead','tbody','tfoot','tr','th','td','colgroup','col',
+  'figure','figcaption','img',
+  ...MATH_TAGS
 ]);
 
 const REMOVE_TAGS = new Set([
@@ -40,6 +37,11 @@ const BLOCK_TAGS = new Set([
   'h1','h2','h3','h4','h5','h6','hr'
 ]);
 
+const RICH_TYPES = new Set(['text','table','math','figure','list','quote','code','html']);
+function blockHasImages(html) {
+  return /<img\b|data-missing-image="1"/.test(String(html || ''));
+}
+
 const INLINE_TAGS = new Set([
   'span','em','strong','i','b','u','s','sub','sup','small','br','code','a',
   'img','mark','q','cite','abbr','time','ruby','rt','rp','del','ins','kbd',
@@ -57,10 +59,10 @@ const MATH_ATTRS = new Set([
   'numalign','denomalign','form','lquote','rquote','actiontype',
   'selection','altimg','altimg-width','altimg-height','altimg-valign',
   'alttext','open','close','separators','subscriptshift','superscriptshift',
-  'accentunder','align','charalign','charspacing','groupalign',
+  'align','charalign','charspacing','groupalign',
   'indentalign','indentalignfirst','indentalignlast','indentshift',
   'indentshiftfirst','indentshiftlast','indenttarget','longdivstyle',
-  'position','shift','stackalign','voffset'
+  'position','shift','stackalign'
 ]);
 
 const HTML_ATTRS = {
@@ -77,17 +79,22 @@ const HTML_ATTRS = {
 };
 
 const NOTE_TYPE_TOKENS = new Set([
-  'footnote','endnote','rearnote','biblioentry','glossdef','note'
+  'footnote','footnotes','endnote','endnotes','rearnote','rearnotes',
+  'biblioentry','glossdef','note','notes'
 ]);
 const NOTE_ROLES = new Set([
-  'doc-footnote','doc-endnote','doc-rearnote','doc-biblioentry',
-  'doc-glossdef','doc-note'
+  'doc-footnote','doc-footnotes','doc-endnote','doc-endnotes','doc-rearnote',
+  'doc-biblioentry','doc-glossdef','doc-note','doc-notes'
 ]);
 const NOTE_CLASS_RE = /(?:^|\s)(?:footnote|endnote|rearnote|biblioentry|glossdef|notes?|footnotes|endnotes)(?:\s|$)/i;
 const NOTE_ID_RE = /(?:footnote|endnote|rearnote|biblioentry|glossdef|(?:^|[-_])note(?:$|[-_\d])|^fn\d+$)/i;
 
 const ESC = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
 function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, c => ESC[c]); }
+function missingImage(label) {
+  const text = String(label == null ? '' : label);
+  return '<span data-missing-image="1" role="img" aria-label="' + esc(text) + '">' + esc(text) + '</span>';
+}
 function norm(value) {
   return String(value == null ? '' : value).replace(/^\uFEFF/, '').replace(/\s+/g, ' ').trim();
 }
@@ -125,12 +132,9 @@ function noteSemanticsInAncestors($el) {
   return false;
 }
 
-function findById($, id) {
-  let found = null;
-  $('[id]').each((_, el) => {
-    if (!found && $(el).attr('id') === id) found = el;
-  });
-  return found ? $(found) : null;
+function findById(doc, id) {
+  const el = doc.ids.get(id);
+  return el ? doc.$(el) : null;
 }
 
 function splitHref(href) {
@@ -166,7 +170,7 @@ function expandMarkers(html, marker, pictures, onImage) {
     if (onImage) onImage(picture);
     const alt = picture.alt || '';
     if (picture.asset) return '<img data-asset="' + esc(picture.asset) + '" alt="' + esc(alt) + '">';
-    return '<span data-missing-image="1" role="img" aria-label="' + esc(alt) + '">' + esc(alt) + '</span>';
+    return missingImage(alt);
   });
 }
 
@@ -205,10 +209,9 @@ function textOfMath(html) {
   const $ = cheerio.load('<body>' + String(html || '') + '</body>');
   const root = $('body');
   const annotations = root.find('annotation').toArray().map(el => norm($(el).text())).filter(Boolean);
-  const visible = cheerio.load('<body>' + String(html || '') + '</body>');
-  visible('annotation').remove();
-  const text = norm(visible('body').text());
-  return text || norm(annotations.join(' '));
+  const visible = root.clone();
+  visible.find('annotation').remove();
+  return norm(visible.text()) || norm(annotations.join(' '));
 }
 
 function blockText(type, html) {
@@ -217,19 +220,17 @@ function blockText(type, html) {
   return textOf(html);
 }
 
-function visibleText(html) {
+// TeX annotations are fallback text for paragraph extraction. Chromium can
+// display them next to the typeset MathML, so strip them from stored rich HTML
+// and report visibility in the same pass.
+function renderRich(html) {
   const $ = cheerio.load('<body>' + String(html || '') + '</body>');
   const root = $('body');
-  root.find('img,[data-missing-image]').remove();
-  return norm(root.text());
-}
-
-// TeX annotations are fallback text for paragraph extraction. Chromium can
-// display them next to the typeset MathML, so never store them in rich HTML.
-function stripAnnotations(html) {
-  const $ = cheerio.load('<body>' + String(html || '') + '</body>');
-  $('annotation').remove();
-  return ($('body').html() || '').trim();
+  const visible = root.clone();
+  visible.find('img,[data-missing-image],annotation').remove();
+  const hasVisible = !!norm(visible.text());
+  root.find('annotation').remove();
+  return {html: (root.html() || '').trim(), hasVisible};
 }
 
 function sanitizeHtml(html, options = {}) {
@@ -245,10 +246,7 @@ function sanitizeHtml(html, options = {}) {
     }
   };
 
-  const missingImage = (alt, original) => {
-    const label = alt == null ? (original.attr('aria-label') || '') : alt;
-    return '<span data-missing-image="1" role="img" aria-label="' + esc(label) + '">' + esc(label) + '</span>';
-  };
+  const missingImageFor = (alt, original) => missingImage(alt || original.attr('aria-label') || '');
 
   const cleanAttributes = (el, tag) => {
     const attrs = el.attribs || {};
@@ -287,7 +285,7 @@ function sanitizeHtml(html, options = {}) {
         }
         $el.attr('data-asset', asset);
       } else {
-        $el.replaceWith(missingImage(alt, $el));
+        $el.replaceWith(missingImageFor(alt, $el));
       }
       return;
     }
@@ -316,6 +314,8 @@ function sanitizeHtml(html, options = {}) {
 
 function createRichParser({zip, imageReader}) {
   const docs = new Map();
+  // premarkNotes and processNotes inspect the same anchors; resolve each once.
+  const located = new WeakMap();
 
   async function getDocument(rel, providedHtml) {
     if (docs.has(rel)) return docs.get(rel);
@@ -327,7 +327,11 @@ function createRichParser({zip, imageReader}) {
     }
     const $ = cheerio.load(html);
     prepareDocument($);
-    const doc = {rel, $};
+    const doc = {rel, $, ids: new Map()};
+    $('[id]').each((_, el) => {
+      const id = $(el).attr('id');
+      if (id && !doc.ids.has(id)) doc.ids.set(id, el);
+    });
     docs.set(rel, doc);
     return doc;
   }
@@ -365,8 +369,6 @@ function createRichParser({zip, imageReader}) {
   async function extractNote(doc, target, targetRel) {
     const $ = doc.$;
     const clone = $(target).clone();
-    clone.find(Array.from(REMOVE_TAGS).filter(tag => tag !== 'svg').join(',')).remove();
-    clone.find('nav,[role="navigation"]').remove();
     clone.find('a').each((_, anchor) => {
       if (isBacklink($, $(anchor))) $(anchor).remove();
     });
@@ -377,10 +379,12 @@ function createRichParser({zip, imageReader}) {
     if (isNoteContainer(tag)) html = clone.html() || '';
     else html = $.html(clone) || '';
     html = expandMarkers(html, scan.marker, scan.pictures);
-    return stripAnnotations(sanitizeHtml(html, {allowNoteref: false}));
+    return renderRich(sanitizeHtml(html, {allowNoteref: false})).html;
   }
 
   async function locateNote(doc, rel, anchor) {
+    const cached = located.get(anchor);
+    if (cached) return cached;
     const $ = doc.$;
     const $a = $(anchor);
     if (isBacklink($, $a)) return null;
@@ -402,13 +406,15 @@ function createRichParser({zip, imageReader}) {
         targetRel = split.pathPart ? resolveEntry(path.posix.dirname(rel), split.pathPart) : rel;
         if (targetRel) {
           targetDoc = await getDocument(targetRel);
-          if (targetDoc) target = findById(targetDoc.$, fragment);
+          if (targetDoc) target = findById(targetDoc, fragment);
         }
       }
     }
 
     const targetIsNote = !!(target && (explicit || hasNoteSemantics(target) || noteSemanticsInAncestors(target)));
-    return {$a, explicit, text, targetDoc, target, targetRel, fragment, targetIsNote};
+    const info = {$a, explicit, text, targetDoc, target, targetRel, fragment, targetIsNote};
+    located.set(anchor, info);
+    return info;
   }
 
   // Hide note targets before parsing any chapter so a notes file that appears
@@ -523,6 +529,19 @@ function createRichParser({zip, imageReader}) {
       for (const picture of collected) addImage(picture, paragraph);
     };
 
+    const emitRich = (type, clean, collected) => {
+      const index = paragraphs.length;
+      const text = blockText(type, clean);
+      const rendered = renderRich(clean);
+      if (type === 'text' && !rendered.hasVisible) {
+        addPictures(collected, index);
+        if (!collected.length && text) paragraphs.push(text);
+        return;
+      }
+      rich[index] = {type, html: rendered.html};
+      paragraphs.push(text);
+    };
+
     const emitInline = async raw => {
       if (!raw || !raw.trim()) return;
       const hasTags = /<\/?[a-z]/i.test(raw);
@@ -533,19 +552,9 @@ function createRichParser({zip, imageReader}) {
         return;
       }
 
-      const index = paragraphs.length;
       const {html, collected} = collectImages(raw);
       const clean = sanitizeHtml(html, {allowNoteref: true});
-      if (!clean) return;
-      const text = textOf(clean);
-      const rendered = stripAnnotations(clean);
-      if (!visibleText(rendered)) {
-        addPictures(collected, index);
-        if (!collected.length && text) paragraphs.push(text);
-        return;
-      }
-      rich[index] = {type: 'text', html: rendered};
-      paragraphs.push(text);
+      if (clean) emitRich('text', clean, collected);
     };
 
     const emitBlock = async (el, tag) => {
@@ -571,19 +580,9 @@ function createRichParser({zip, imageReader}) {
 
       const raw = type === 'text' ? ($(el).html() || '') : ($.html(el) || '');
       if (!raw.trim()) return;
-      const index = paragraphs.length;
       const {html, collected} = collectImages(raw);
       const clean = sanitizeHtml(html, {allowNoteref: true});
-      if (!clean) return;
-      const text = blockText(type, clean);
-      const rendered = stripAnnotations(clean);
-      if (type === 'text' && !visibleText(rendered)) {
-        addPictures(collected, index);
-        if (!collected.length && text) paragraphs.push(text);
-        return;
-      }
-      rich[index] = {type, html: rendered};
-      paragraphs.push(text);
+      if (clean) emitRich(type, clean, collected);
     };
 
     const walk = async parent => {
@@ -618,20 +617,13 @@ function createRichParser({zip, imageReader}) {
 
     await walk(body);
 
-    const coalesced = images.reduce((out, group) => {
-      const last = out.at(-1);
-      if (last && last.paragraph === group.paragraph) last.items.push(...group.items);
-      else out.push(group);
-      return out;
-    }, []);
-
-    const chapter = {title, paragraphs, images: coalesced, epubPath: rel};
+    const chapter = {title, paragraphs, images, epubPath: rel};
     if (Object.keys(rich).length) chapter.rich = rich;
     if (notes.length) chapter.notes = notes;
     return chapter;
   }
 
-  return {parseChapter, premarkNotes, sanitizeHtml};
+  return {parseChapter, premarkNotes};
 }
 
-module.exports = {createRichParser, sanitizeHtml};
+module.exports = {createRichParser, RICH_TYPES, blockHasImages};

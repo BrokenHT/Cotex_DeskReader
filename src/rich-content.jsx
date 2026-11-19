@@ -1,6 +1,6 @@
 import React,{useMemo} from 'react';
 import DOMPurify from 'dompurify';
-import {ChevronDown,ChevronRight,Images} from 'lucide-react';
+import {ImageToggle} from './image-toggle.jsx';
 
 const forbiddenTags=['script','style','iframe','object','embed','link','meta','form','input','button','select','textarea','audio','video','canvas','svg'];
 const forbiddenAttributes=new Set(['style','srcset','formaction','background','poster','xlink:href']);
@@ -12,32 +12,25 @@ const purifyConfig={
  ALLOW_ARIA_ATTR:true
 };
 
-function cleanAttributes(root){
- for(const element of root.querySelectorAll('*')){
-  for(const attribute of [...element.attributes]){
-   const name=attribute.name.toLowerCase();
-   if(name.startsWith('on')||forbiddenAttributes.has(name))element.removeAttribute(attribute.name);
-  }
- }
-}
-
 function replaceImages(root,media){
  for(const image of [...root.querySelectorAll('img')]){
   const asset=image.getAttribute('data-asset');
   const source=asset&&media&&Object.prototype.hasOwnProperty.call(media,asset)?media[asset]:'';
   if(typeof source!=='string'||!/^data:image\//i.test(source)){
+   const alt=image.getAttribute('alt')||'';
    const missing=document.createElement('span');
    missing.className='rich-missing-image';
+   missing.setAttribute('data-missing-image','1');
    missing.setAttribute('role','img');
-   missing.textContent=image.getAttribute('alt')||'';
+   missing.setAttribute('aria-label',alt||'图片暂不可用');
+   missing.textContent=alt;
    image.replaceWith(missing);
    continue;
   }
   image.setAttribute('src',source);
   image.setAttribute('tabindex','0');
   image.setAttribute('role','button');
-  if(!image.getAttribute('aria-label'))image.setAttribute('aria-label','查看图片'+(image.getAttribute('alt')?'：'+image.getAttribute('alt'):''));
- }
+  if(!image.getAttribute('aria-label'))image.setAttribute('aria-label','查看图片'+(image.getAttribute('alt')?'：'+image.getAttribute('alt'):'')); }
 }
 
 function normalizeLinks(root){
@@ -73,8 +66,6 @@ function prepareHtml(html,media,simplified,convert){
  for(const annotation of [...template.content.querySelectorAll('annotation')])annotation.remove();
  template.innerHTML=DOMPurify.sanitize(template.innerHTML,purifyConfig);
  const root=template.content;
- for(const element of [...root.querySelectorAll(forbiddenTags.join(','))])element.remove();
- cleanAttributes(root);
  replaceImages(root,media);
  normalizeLinks(root);
  if(simplified&&typeof convert==='function')convertText(root,convert);
@@ -119,7 +110,7 @@ function keyRich(event,onOpenNote,onPreviewImage){
 export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,onOpenNote,onPreviewImage,collapsed,onToggleImages}){
  const content=useRichHtml(html,media,simplified,convert);
  const kind=type||'html';
- const imageCount=(content.match(/<img\b/g)||[]).length+(content.match(/data-missing-image="1"/g)||[]).length;
+ const imageCount=useMemo(()=>(content.match(/<img\b/g)||[]).length+(content.match(/data-missing-image="1"/g)||[]).length,[content]);
  const className=(kind==='text'?'rich-text':'rich-block rich-'+kind)+(collapsed?' images-collapsed':'');
  const props={
   'data-chapter':chapter,
@@ -132,7 +123,7 @@ export function RichBlock({html,type,chapter,paragraph,media,simplified,convert,
  const element=kind==='text'?<p {...props}/>:<div {...props}/>;
  if(!imageCount)return element;
  return <div className="rich-media-block" data-group={chapter+':'+paragraph}>
-  <button className="image-toggle" type="button" aria-expanded={!collapsed} onClick={onToggleImages}><Images size={17}/><span>已查看图片{imageCount>1?' · '+imageCount+' 张':''}</span>{collapsed?<ChevronRight size={15}/>:<ChevronDown size={15}/>}</button>
+  <ImageToggle collapsed={collapsed} count={imageCount} onToggle={onToggleImages}/>
   {element}
  </div>;
 }

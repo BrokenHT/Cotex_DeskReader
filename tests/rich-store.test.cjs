@@ -83,13 +83,16 @@ test('validateBackup rejects malformed rich content',()=>{
 });
 
 test('validateBackup rejects malformed notes and oversized HTML',()=>{
+  const many=backup();
+  many.books[0].chapters[0].notes=Array.from({length:501},(_,index)=>({id:'note-'+index,label:'注',html:''}));
+  assert.doesNotThrow(()=>validateBackup(many));
   const invalid=(change,message)=>{
     const data=backup();
     change(data.books[0].chapters[0]);
     assert.throws(()=>validateBackup(data),new RegExp(message));
   };
   invalid(chapter=>{chapter.notes=[{id:'same',label:'一',html:''},{id:'same',label:'二',html:''}];},'备份注释格式有误');
-  invalid(chapter=>{chapter.notes=Array.from({length:501},(_,index)=>({id:'note-'+index,label:'注',html:''}));},'备份注释格式有误');
+  invalid(chapter=>{chapter.notes=Array.from({length:5001},(_,index)=>({id:'note-'+index,label:'注',html:''}));},'备份注释格式有误');
   invalid(chapter=>{chapter.notes=[{id:'large',label:'大',html:'a'.repeat(2_000_001)}];},'备份内容过大');
   invalid(chapter=>{
     const large='a'.repeat(2_000_000);

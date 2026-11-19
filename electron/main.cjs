@@ -3,7 +3,7 @@ const fs=require('node:fs');const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const {parseTXT,parseEPUB,finalizeBook,chapterMatches,MAX_BYTES,uid}=require('./core.cjs');
 const {Store}=require('./store.cjs');
-const {validateBackup}=require('./backup.cjs');
+const {validateBackup,BACKUP_FORMAT,BACKUP_VERSION}=require('./backup.cjs');
 const {Sources,SOURCE_LIST,isSourceURL,withCatalog}=require('./sources.cjs');
 const {readWindowState,rememberWindow}=require('./window-state.cjs');
 let win,store,sources,closeAllowed=false;
@@ -54,7 +54,7 @@ function register(){
  handler('refresh',async id=>{const original=store.get(id);const updated=await sources.refresh(original);const latest=store.get(id);return store.save(original.updatedAt===latest.updatedAt?updated:withCatalog(latest,updated.chapters));});
  handler('external',url=>{const u=new URL(url);if(!isSourceURL(u.toString())&&!(u.protocol==='https:'&&u.hostname==='github.com'&&!u.username&&!u.password&&!u.port))throw new Error('不支持的链接');return shell.openExternal(u.toString());});
  handler('export',async id=>{const b=store.get(id);const r=await dialog.showSaveDialog(win,{defaultPath:b.title.replace(/[\\/:*?"<>|]/g,'_')+'.txt',filters:[{name:'TXT 文本',extensions:['txt']}]});if(r.canceled)return false;let t=b.title+'\n'+b.author+'\n来源：'+(b.source.url||'本地导入')+'\n\n';for(const c of b.chapters)if(c.paragraphs)t+=c.title+'\n\n'+c.paragraphs.join('\n\n')+'\n\n';await fs.promises.writeFile(r.filePath,t,'utf8');return true;});
- handler('backup',async()=>{const r=await dialog.showSaveDialog(win,{defaultPath:'Cotex-backup.json',filters:[{name:'书库备份',extensions:['json']}]});if(r.canceled)return false;await fs.promises.writeFile(r.filePath,JSON.stringify({format:'DeskReaderBackup',version:1,settings:store.db.settings,books:store.db.books.map(b=>store.get(b.id))}),'utf8');return true;});
+ handler('backup',async()=>{const r=await dialog.showSaveDialog(win,{defaultPath:'Cotex-backup.json',filters:[{name:'书库备份',extensions:['json']}]});if(r.canceled)return false;await fs.promises.writeFile(r.filePath,JSON.stringify({format:BACKUP_FORMAT,version:BACKUP_VERSION,settings:store.db.settings,books:store.db.books.map(b=>store.get(b.id))}),'utf8');return true;});
  handler('restore',async()=>{const r=await dialog.showOpenDialog(win,{properties:['openFile'],filters:[{name:'书库备份',extensions:['json']}]});if(r.canceled)return null;const f=r.filePaths[0];if((await fs.promises.stat(f)).size>300*1024*1024)throw new Error('备份文件过大');const d=JSON.parse(await fs.promises.readFile(f,'utf8'));validateBackup(d);for(const b of d.books)store.add(b);store.settings(d.settings||{});return store.state();});
  handler('window',a=>{if(a==='minimize')win.minimize();if(a==='maximize')win.isMaximized()?win.unmaximize():win.maximize();if(a==='close'){closeAllowed=true;win.close();}});
  handler('menu',name=>{

@@ -48,7 +48,7 @@ The frameless window close is a handshake: main intercepts `close`, sends `prepa
 - Writes are atomic (`.tmp` → rename) and keep a `.bak`; reads fall back to `.bak`. Removing a book moves it to `trash/`.
 - Book id is `sha256(identity)` truncated to 24 hex chars; `file(id)` validates that format.
 - Re-importing the same EPUB with a higher `contentVersion` runs `epub-upgrade.cjs`: chapters are matched by `epubPath` (then title fallback) so alias, progress, bookmarks, and collapsed state survive while images get filled in.
-- Backup format is `DeskReaderBackup` v1 (JSON, includes media and rich content). `electron/backup.cjs` validates every field, bounds rich HTML/notes (2 MB per block, 50 MB per book, 500 notes), and re-sanitizes SVG media on restore.
+- Backup format is `DeskReaderBackup` v1 (JSON, includes media and rich content). `electron/backup.cjs` validates every field, bounds rich HTML/notes (2 MB per block, 50 MB per book, 5000 notes), and re-sanitizes SVG media on restore.
 
 ### Parsing (`electron/core.cjs`, `electron/epub-images.cjs`)
 

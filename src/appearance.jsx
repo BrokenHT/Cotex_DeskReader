@@ -1,5 +1,6 @@
 import React,{useState,useRef,useEffect} from 'react';
-import {ChevronDown,ChevronRight,Images,ImageOff,Upload,RotateCcw} from 'lucide-react';
+import {ImageOff,Upload,RotateCcw} from 'lucide-react';
+import {ImageToggle} from './image-toggle.jsx';
 import workbuddyMark from '../assets/brands/workbuddy-mark.svg';
 
 const segmenter=new Intl.Segmenter('zh',{granularity:'grapheme'});
@@ -35,7 +36,7 @@ function LimitedInput({value,max,onChange,...props}) {
 export function ImageGallery({group,chapter,media,collapsed,onToggle,onPreview}) {
  const [failed,setFailed]=useState({});
  return <div className={'epub-images '+(collapsed?'images-collapsed':'')} data-chapter={chapter} data-paragraph={group.paragraph} data-group={chapter+':'+group.paragraph}>
-  <button className="image-toggle" type="button" aria-expanded={!collapsed} onClick={onToggle}><Images size={17}/><span>已查看图片{group.items.length>1?' · '+group.items.length+' 张':''}</span>{collapsed?<ChevronRight size={15}/>:<ChevronDown size={15}/>}</button>
+  <ImageToggle collapsed={collapsed} count={group.items.length} onToggle={onToggle}/>
   {!collapsed&&<div className="image-thumbnails">{group.items.map((item,i)=>item.missing||failed[i]||!media?.[item.asset]?<div className="image-missing" key={i}><ImageOff size={24}/><span>{item.alt||'图片暂不可用'}</span><small>{item.missing?'原文件缺少可用图片资源':'无法读取此图片'}</small></div>:<button className="image-thumbnail" type="button" key={i} aria-label={'查看图片 '+(i+1)+(item.alt?'：'+item.alt:'')} onClick={()=>onPreview({src:media[item.asset],alt:item.alt})}><img src={media[item.asset]} alt={item.alt||'EPUB 插图 '+(i+1)} loading="lazy" onError={()=>setFailed(s=>({...s,[i]:true}))}/></button>)}</div>}
  </div>;
 }

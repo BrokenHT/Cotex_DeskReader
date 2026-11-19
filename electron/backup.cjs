@@ -1,11 +1,12 @@
 const {validMedia}=require('./epub-images.cjs');
+const {RICH_TYPES}=require('./rich-content.cjs');
 
 const BACKUP_FORMAT='DeskReaderBackup';
-const RICH_TYPES=new Set(['text','table','math','figure','list','quote','code','html']);
+const BACKUP_VERSION=1;
 const RICH_INDEX=/^(0|[1-9]\d*)$/;
 const MAX_HTML_LENGTH=2_000_000;
 const MAX_BOOK_HTML_LENGTH=50_000_000;
-const MAX_NOTES=500;
+const MAX_NOTES=5000;
 
 const own=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
 const isPlainObject=value=>{
@@ -15,7 +16,7 @@ const isPlainObject=value=>{
 };
 
 function validateBackup(data){
-  if(!data||typeof data!=='object'||data.format!==BACKUP_FORMAT||data.version!==1||!Array.isArray(data.books))throw new Error('不是有效的 Cotex / DeskReader 备份');
+  if(!data||typeof data!=='object'||data.format!==BACKUP_FORMAT||data.version!==BACKUP_VERSION||!Array.isArray(data.books))throw new Error('不是有效的 Cotex / DeskReader 备份');
   for(const book of data.books){
     if(!book||typeof book!=='object'||!/^[a-f0-9]{24}$/.test(book.id)||!Array.isArray(book.chapters)||!book.chapters.length||typeof book.title!=='string'||!book.progress||!Array.isArray(book.bookmarks)||!Array.isArray(book.collapsed))throw new Error('备份内容不完整');
     let bookHtmlLength=0;
@@ -49,4 +50,4 @@ function validateBackup(data){
   return data;
 }
 
-module.exports={validateBackup};
+module.exports={validateBackup,BACKUP_FORMAT,BACKUP_VERSION};
