@@ -1,0 +1,94 @@
+/* Rich EPUB blocks stay inside their own wrappers so tables and math cannot
+   widen the reading column or affect unrelated application chrome. */
+.rich-text,
+.rich-block,
+.rich-note{max-width:100%;overflow-wrap:anywhere;word-break:normal;color:var(--text)}
+.rich-block{min-width:0;margin:0 0 18px}
+.rich-text{min-width:0}
+.rich-media-block{margin:0 0 18px}
+.rich-media-block>.rich-text,
+.rich-media-block>.rich-block{margin-bottom:0}
+.rich-media-block .image-toggle{margin-bottom:.35em}
+.rich-media-block .images-collapsed img,
+.rich-media-block .images-collapsed [data-missing-image]{display:none}
+.prose .rich-text,
+.prose .rich-block p{white-space:normal}
+.rich-block>*:first-child,
+.rich-note>*:first-child{margin-top:0}
+.rich-block>*:last-child,
+.rich-note>*:last-child{margin-bottom:0}
+
+.rich-block h1,
+.rich-block h2,
+.rich-block h3,
+.rich-block h4,
+.rich-block h5,
+.rich-block h6,
+.rich-note h1,
+.rich-note h2,
+.rich-note h3,
+.rich-note h4,
+.rich-note h5,
+.rich-note h6{margin:1.25em 0 .55em;font-weight:650;line-height:1.35;letter-spacing:-.01em}
+.rich-block h1,.rich-note h1{font-size:1.5em}
+.rich-block h2,.rich-note h2{font-size:1.32em}
+.rich-block h3,.rich-note h3{font-size:1.18em}
+.rich-block h4,.rich-block h5,.rich-block h6,
+.rich-note h4,.rich-note h5,.rich-note h6{font-size:1.05em}
+
+.rich-table{overflow-x:auto;overscroll-behavior-x:contain}
+.rich-table table,
+.rich-note table{border-collapse:collapse;border-spacing:0;min-width:100%;width:max-content;max-width:none;font-size:.95em;line-height:1.55}
+.rich-table th,
+.rich-table td,
+.rich-note th,
+.rich-note td{border:1px solid var(--line);padding:.42em .68em;vertical-align:top;text-align:left}
+.rich-table th,
+.rich-note th{background:var(--chrome);font-weight:600}
+.rich-table caption,
+.rich-note caption{color:var(--muted);font-size:.9em;line-height:1.6;padding:.35em 0;text-align:left;caption-side:top}
+
+.rich-math{overflow-x:auto;overscroll-behavior-x:contain;text-align:center;padding:.35em 0}
+.rich-math math,
+.rich-note math{font-size:1.12em}
+.rich-math math[display="block"],
+.rich-note math[display="block"]{display:block;width:max-content;max-width:100%;margin:.55em auto}
+/* Chromium can render the TeX annotation next to the typeset MathML; it is
+   fallback text, not part of the equation. */
+.rich-text annotation,
+.rich-block annotation,
+.rich-note annotation{display:none}
+
+.rich-figure{text-align:center}
+.rich-figure figure,
+.rich-note figure{margin:0 0 18px}
+.rich-text img,
+.rich-block img,
+.rich-note img{max-width:100%;height:auto}
+.rich-text img{vertical-align:middle}
+.rich-figure img,
+.rich-note figure img{display:block;margin:.25em auto}
+.rich-figure figcaption,
+.rich-note figcaption{color:var(--muted);font-size:.9em;line-height:1.65;margin-top:.45em;text-align:center}
+
+.rich-block ul,
+.rich-block ol,
+.rich-note ul,
+.rich-note ol{margin:0 0 1em;padding-left:1.8em}
+.rich-block li,
+.rich-note li{margin:.25em 0}
+.rich-quote blockquote,
+.rich-note blockquote{margin:0 0 18px;padding:.15em 0 .15em 1em;border-left:3px solid var(--line);color:var(--muted);font-style:italic}
+.rich-code pre,
+.rich-note pre{max-width:100%;margin:0 0 18px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;background:var(--chrome);overflow-x:auto;overscroll-behavior-x:contain;font-family:"Cascadia Code","SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:.9em;line-height:1.65;white-space:pre;tab-size:2}
+.rich-code pre code,
+.rich-note pre code{padding:0;background:none;font:inherit;white-space:inherit}
+.rich-block :not(pre)>code,
+.rich-note :not(pre)>code{padding:.08em .32em;border-radius:4px;background:var(--hover);font-family:"Cascadia Code","SFMono-Regular",Consolas,"Liberation Mono",monospace;font-size:.92em}
+
+.rich-note-ref{color:var(--blue);font-size:inherit;font-weight:600;line-height:inherit;text-decoration:none;cursor:pointer;border-radius:3px;padding:0 .12em}
+.rich-note-ref:hover,.rich-note-ref:focus-visible{text-decoration:underline;background:var(--bubble)}
+.rich-missing-image{display:inline-flex;align-items:center;justify-content:center;min-height:1.8em;max-width:100%;padding:.35em .65em;border:1px dashed var(--line);border-radius:6px;background:var(--chrome);color:var(--muted);font-size:.88em;line-height:1.45;text-align:center}
+
+.rich-note{min-height:0;max-height:100%;overflow:auto;padding:0 23px 24px;font-size:var(--reading-size);line-height:var(--reading-leading)}
+.rich-note p{margin:0 0 18px}
